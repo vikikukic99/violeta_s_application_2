@@ -36,10 +36,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
           ),
         ),
-        bottomNavigationBar: SizedBox(
-          width: double.maxFinite,
-          child: _buildBottomBar(context),
-        ),
+        bottomNavigationBar: const BottomNavigation(),
       ),
     );
   }
@@ -52,6 +49,8 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       titleColor: theme.textTheme.headlineSmall?.color,
       profileIcon: ImageConstant.imgIGray600,
       onProfileTap: () => _onTapSettings(context),
+      showBackButton: true,
+      onBackTap: () => Navigator.pop(context),
     );
   }
 
@@ -189,8 +188,18 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  /// Section Widget - Bottom Navigation Bar
-  Widget _buildBottomBar(BuildContext context) {
+  /// Settings button tap
+  void _onTapSettings(BuildContext context) {
+    NavigatorService.pushNamed(AppRoutes.editProfileScreen);
+  }
+}
+
+/// Bottom navigation menu displayed in the Profile screen
+class BottomNavigation extends StatelessWidget {
+  const BottomNavigation({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     List<CustomBottomBarItem> bottomBarItemList = [
       CustomBottomBarItem(
         iconPath: ImageConstant.imgNavChat,
@@ -219,10 +228,5 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: EdgeInsets.symmetric(horizontal: 70.h, vertical: 14.h),
       height: 84.h,
     );
-  }
-
-  /// Settings button tap
-  void _onTapSettings(BuildContext context) {
-    NavigatorService.pushNamed(AppRoutes.editProfileScreen);
   }
 }
