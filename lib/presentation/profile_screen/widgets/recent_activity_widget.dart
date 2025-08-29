@@ -14,58 +14,48 @@ class RecentActivityWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(12.h),
-      decoration: BoxDecoration(
-        color: appTheme.white_A700,
-        borderRadius: BorderRadius.circular(12.h),
-        border: Border.all(color: appTheme.blue_gray_100),
-      ),
       child: Row(
         children: [
           CustomIconButton(
-            iconPath: activity.icon ?? '',
-            backgroundColor: activity.iconBackgroundColor,
-            size: 40.h,
-            borderRadius: 20.h,
-            padding: EdgeInsets.all(8.h),
+            iconPath: activity.icon ?? ImageConstant.imgVectorBlueA700,
+            backgroundColor:
+                activity.iconBackgroundColor ?? appTheme.blue_50_01,
+            size: 32.h,
+            borderRadius: 16.h,
+            padding: EdgeInsets.all(4.h),
           ),
-          SizedBox(width: 12.h),
+          SizedBox(width: 8.h),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      activity.title ?? '',
-                      style: TextStyleHelper.instance.body14SemiBoldInter
-                          .copyWith(color: appTheme.blue_gray_900),
-                    ),
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 6.h, vertical: 2.h),
-                      decoration: BoxDecoration(
-                        color: activity.statusBackgroundColor,
-                        borderRadius: BorderRadius.circular(4.h),
-                      ),
-                      child: Text(
-                        activity.status ?? '',
-                        style: TextStyleHelper.instance.body12MediumInter
-                            .copyWith(color: activity.statusTextColor),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 4.h),
                 Text(
-                  '${activity.joinedCount} • ${activity.location}',
+                  activity.title ?? 'Cycling Night',
+                  style: TextStyleHelper.instance.body14SemiBoldInter
+                      .copyWith(color: appTheme.blue_gray_900, height: 1.21),
+                ),
+                Text(
+                  activity.subtitle ?? 'Organized • 2 days ago',
                   style: TextStyleHelper.instance.body12RegularInter
-                      .copyWith(color: appTheme.blue_gray_700),
+                      .copyWith(height: 1.25),
                 ),
               ],
             ),
           ),
+          if (activity.status?.isNotEmpty == true)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 6.h, vertical: 2.h),
+              decoration: BoxDecoration(
+                color: activity.statusBackgroundColor ?? appTheme.green_50,
+                borderRadius: BorderRadius.circular(4.h),
+              ),
+              child: Text(
+                activity.status!,
+                style: TextStyleHelper.instance.body12MediumInter.copyWith(
+                    color: activity.statusTextColor ?? appTheme.green_700,
+                    height: 1.25),
+              ),
+            ),
         ],
       ),
     );
