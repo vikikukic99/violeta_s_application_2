@@ -22,7 +22,7 @@ import './custom_image_view.dart';
  * @param height - Height of the app bar
  */
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
-  CustomAppBar({
+ CustomAppBar({
     Key? key,
     this.backgroundColor,
     this.logoImage,
@@ -31,6 +31,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.profileIcon,
     this.onProfileTap,
     this.height,
+    this.showBackButton = false,
+    this.onBackTap,
   }) : super(key: key);
 
   /// Background color of the app bar
@@ -54,6 +56,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Height of the app bar
   final double? height;
 
+  /// Whether to display a back button on the leading side
+  final bool showBackButton;
+
+  /// Callback when the back button is tapped
+  final VoidCallback? onBackTap;
+
   @override
   Size get preferredSize => Size.fromHeight(height ?? 84.h);
 
@@ -64,6 +72,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       automaticallyImplyLeading: false,
       toolbarHeight: height ?? 84.h,
+      leading: showBackButton
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: onBackTap,
+            )
+          : null,
       title: Row(
         children: [
           if (logoImage != null) ...[
