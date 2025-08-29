@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_image_view.dart';
-import '../../widgets/custom_bottom_bar.dart';
 import './notifier/profile_notifier.dart';
 import './widgets/activity_chip_widget.dart';
 import './widgets/recent_activity_widget.dart';
@@ -33,12 +32,9 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
               SizedBox(height: 24.h),
               _buildRecentActivitiesSection(context),
               Spacer(),
+              _buildBottomNavigationSection(context),
             ],
           ),
-        ),
-        bottomNavigationBar: SizedBox(
-          width: double.maxFinite,
-          child: _buildBottomBar(context),
         ),
       ),
     );
@@ -52,6 +48,7 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
       titleColor: theme.textTheme.headlineSmall?.color,
       profileIcon: ImageConstant.imgIGray600,
       onProfileTap: () => _onTapSettings(context),
+      showBackButton: true,
     );
   }
 
@@ -189,35 +186,80 @@ class ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  /// Section Widget - Bottom Navigation Bar
-  Widget _buildBottomBar(BuildContext context) {
-    List<CustomBottomBarItem> bottomBarItemList = [
-      CustomBottomBarItem(
-        iconPath: ImageConstant.imgNavChat,
-        title: 'Chat',
-        routeName: AppRoutes.chatConversationScreen,
+  /// Bottom Navigation Helper Method
+  Widget _buildNavItem(
+      BuildContext context, String label, IconData icon, bool isActive) {
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          // Add navigation logic here
+          if (label == 'Chat') {
+            NavigatorService.pushNamed(AppRoutes.chatConversationScreen);
+          } else if (label == 'WalkTalk') {
+            NavigatorService.pushNamed(AppRoutes.nearbyActivitiesScreen);
+          }
+        },
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isActive ? appTheme.green_500 : appTheme.blue_gray_300,
+                size: 24.h,
+              ),
+              SizedBox(height: 4.h),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isActive ? appTheme.green_500 : appTheme.blue_gray_300,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      CustomBottomBarItem(
-        iconPath: ImageConstant.imgFrame,
-        title: 'WalkTalk',
-        routeName: AppRoutes.nearbyActivitiesScreenInitialPage,
-      ),
-      CustomBottomBarItem(
-        iconPath: ImageConstant.imgNavProfile,
-        title: 'Profile',
-        routeName: AppRoutes.profileScreen,
-      ),
-    ];
+    );
+  }
 
-    return CustomBottomBar(
-      bottomBarItemList: bottomBarItemList,
-      onChanged: (index) {
-        NavigatorService.pushNamed(bottomBarItemList[index].routeName);
-      },
-      selectedIndex: 2,
-      backgroundColor: appTheme.white_A700,
-      padding: EdgeInsets.symmetric(horizontal: 70.h, vertical: 14.h),
-      height: 84.h,
+  /// Section Widget - Bottom Navigation
+  Widget _buildBottomNavigationSection(BuildContext context) {
+    return Container(
+      height: 70.h,
+      decoration: BoxDecoration(
+        color: appTheme.white_A700,
+        border: Border(
+          top: BorderSide(
+            color: appTheme.blue_gray_100,
+            width: 1.h,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavItem(
+            context,
+            'Chat',
+            Icons.chat_bubble_outline,
+            false,
+          ),
+          _buildNavItem(
+            context,
+            'WalkTalk',
+            Icons.group_outlined,
+            false,
+          ),
+          _buildNavItem(
+            context,
+            'Profile',
+            Icons.person,
+            true, // This is the active screen
+          ),
+        ],
+      ),
     );
   }
 
