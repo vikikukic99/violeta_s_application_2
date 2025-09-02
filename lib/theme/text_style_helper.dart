@@ -260,4 +260,11 @@ class TextStyleHelper {
         fontFamily: 'Poppins',
         color: appTheme.blue_gray_700,
       );
+
+  TextStyle get body16RegularPoppins => TextStyle(
+        fontSize: 16.fSize,
+        fontWeight: FontWeight.w400,
+        fontFamily: 'Poppins',
+        color: appTheme.blue_gray_700,
+      );
 }

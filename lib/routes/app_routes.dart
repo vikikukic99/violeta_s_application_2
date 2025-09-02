@@ -12,8 +12,8 @@ import '../presentation/payment_methods_screen/payment_methods_screen.dart';
 import '../presentation/privacy_settings_screen/privacy_settings_screen.dart';
 import '../presentation/chat_conversation_screen/chat_conversation_screen.dart';
 import '../presentation/activity_detail_screen/activity_detail_screen.dart';
-
 import '../presentation/app_navigation_screen/app_navigation_screen.dart';
+import '../presentation/chat_list_screen/chat_list_screen.dart';
 
 class AppRoutes {
   static const String splashScreen = '/splash_screen';
@@ -22,15 +22,21 @@ class AppRoutes {
   static const String activitySelectionScreen = '/activity_selection_screen';
   static const String healthDataConnectionScreen =
       '/health_data_connection_screen';
+
   static const String profileScreen = '/profile_screen';
   static const String editProfileScreen = '/edit_profile_screen';
+
   static const String nearbyActivitiesScreen = '/nearby_activities_screen';
   static const String nearbyActivitiesScreenInitialPage =
       '/nearby_activities_screen_initial_page';
+
   static const String loginScreen = '/login_screen';
   static const String paymentMethodsScreen = '/payment_methods_screen';
   static const String privacySettingsScreen = '/privacy_settings_screen';
+
   static const String chatConversationScreen = '/chat_conversation_screen';
+  static const String chatListScreen = '/chat_list_screen';
+
   static const String activityDetailScreen = '/activity_detail_screen';
 
   static const String appNavigationScreen = '/app_navigation_screen';
@@ -49,8 +55,9 @@ class AppRoutes {
         paymentMethodsScreen: (context) => PaymentMethodsScreen(),
         privacySettingsScreen: (context) => PrivacySettingsScreen(),
         chatConversationScreen: (context) => ChatConversationScreen(),
+        chatListScreen: (context) => const ChatListScreen(),
         activityDetailScreen: (context) => ActivityDetailScreen(),
         appNavigationScreen: (context) => AppNavigationScreen(),
-        initialRoute: (context) => AppNavigationScreen()
+        initialRoute: (context) => AppNavigationScreen(),
       };
 }

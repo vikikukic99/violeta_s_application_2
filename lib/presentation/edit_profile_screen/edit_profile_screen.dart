@@ -323,41 +323,8 @@ class EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Widget _buildBottomBar(BuildContext context) {
     return CustomBottomBar(
-      bottomBarItemList: [
-        CustomBottomBarItem(
-          iconPath: ImageConstant.imgChatIcon,
-          title: "Chat",
-          routeName: AppRoutes.chatConversationScreen,
-        ),
-        CustomBottomBarItem(
-          iconPath: ImageConstant.imgWalkTalkIcon,
-          title: "WalkTalk",
-          routeName: AppRoutes.nearbyActivitiesScreen,
-        ),
-        CustomBottomBarItem(
-          iconPath: ImageConstant.imgProfileIcon,
-          title: "Profile",
-          routeName: AppRoutes.profileScreen,
-        ),
-      ],
-      selectedIndex: 2,
-      onChanged: (int index) {
-        String routeName;
-        switch (index) {
-          case 0:
-            routeName = AppRoutes.chatConversationScreen;
-            break;
-          case 1:
-            routeName = AppRoutes.nearbyActivitiesScreen;
-            break;
-          case 2:
-            routeName = AppRoutes.profileScreen;
-            break;
-          default:
-            routeName = AppRoutes.profileScreen;
-        }
-        Navigator.pushNamedAndRemoveUntil(context, routeName, (route) => false);
-      },
+      selectedIndex: 2, // Profile tab is selected since this is profile-related
+      onChanged: (index) => CustomBottomBar.handleNavigation(context, index),
     );
   }
 

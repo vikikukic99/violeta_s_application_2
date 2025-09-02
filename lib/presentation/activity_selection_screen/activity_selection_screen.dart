@@ -5,6 +5,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_edit_text.dart';
 import '../../widgets/custom_search_view.dart';
 import './widgets/activity_card_widget.dart';
+import './widgets/ai_enhanced_text_field.dart';
 import 'notifier/activity_selection_notifier.dart';
 
 class ActivitySelectionScreen extends ConsumerStatefulWidget {
@@ -63,7 +64,7 @@ class ActivitySelectionScreenState
                   style: TextStyleHelper.instance.headline24BoldInter,
                 ),
                 SizedBox(height: 16.h),
-                _buildDescriptionField(),
+                _buildAIEnhancedDescriptionField(),
                 SizedBox(height: 40.h),
                 CustomButton(
                   text: 'Continue',
@@ -112,11 +113,129 @@ class ActivitySelectionScreenState
   }
 
   Widget _buildLocationField() {
-    return CustomEditText(
-      hintText: 'Find your city',
-      rightIcon: ImageConstant.imgDivGreen500,
-      borderColor: appTheme.blue_gray_100,
-      backgroundColor: appTheme.white_A700,
+    return Consumer(
+      builder: (context, ref, _) {
+        final state = ref.watch(activitySelectionNotifier);
+        final notifier = ref.read(activitySelectionNotifier.notifier);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: CustomEditText(
+                    controller: state.locationController,
+                    hintText: 'Find your city',
+                    borderColor: appTheme.blue_gray_100,
+                    backgroundColor: appTheme.white_A700,
+                  ),
+                ),
+                SizedBox(width: 12.h),
+                GestureDetector(
+                  onTap: () {
+                    notifier.getCurrentLocation();
+                  },
+                  child: Container(
+                    width: 48.h,
+                    height: 48.h,
+                    decoration: BoxDecoration(
+                      color: appTheme.green_500,
+                      borderRadius: BorderRadius.circular(8.h),
+                    ),
+                    child: state.isSearchingLocation == true
+                        ? SizedBox(
+                            height: 20.h,
+                            width: 20.h,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: appTheme.white_A700,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            Icons.my_location,
+                            color: appTheme.white_A700,
+                            size: 20.h,
+                          ),
+                  ),
+                ),
+              ],
+            ),
+            if (state.locationError != null) ...[
+              SizedBox(height: 8.h),
+              Container(
+                padding: EdgeInsets.all(12.h),
+                decoration: BoxDecoration(
+                  color: appTheme.colorFFEF44.withAlpha(26),
+                  borderRadius: BorderRadius.circular(8.h),
+                  border: Border.all(color: appTheme.colorFFEF44),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline,
+                        color: appTheme.colorFFEF44, size: 16.h),
+                    SizedBox(width: 8.h),
+                    Expanded(
+                      child: Text(
+                        state.locationError!,
+                        style: TextStyleHelper.instance.body12RegularInter
+                            .copyWith(color: appTheme.colorFFEF44),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => notifier.clearLocationError(),
+                      child: Icon(Icons.close,
+                          color: appTheme.colorFFEF44, size: 16.h),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (state.citySearchResults?.isNotEmpty == true) ...[
+              SizedBox(height: 8.h),
+              Container(
+                constraints: BoxConstraints(maxHeight: 200.h),
+                decoration: BoxDecoration(
+                  color: appTheme.white_A700,
+                  borderRadius: BorderRadius.circular(8.h),
+                  border: Border.all(color: appTheme.blue_gray_100),
+                  boxShadow: [
+                    BoxShadow(
+                      color: appTheme.black_900.withAlpha(26),
+                      blurRadius: 8.h,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: state.citySearchResults!.length,
+                  separatorBuilder: (context, index) => Divider(
+                    height: 1.h,
+                    color: appTheme.blue_gray_100,
+                  ),
+                  itemBuilder: (context, index) {
+                    final city = state.citySearchResults![index];
+                    return ListTile(
+                      title: Text(
+                        city,
+                        style: TextStyleHelper.instance.body14RegularInter,
+                      ),
+                      onTap: () {
+                        notifier.selectCity(city);
+                      },
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16.h),
+                      dense: true,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -152,18 +271,19 @@ class ActivitySelectionScreenState
     );
   }
 
-  Widget _buildDescriptionField() {
+  Widget _buildAIEnhancedDescriptionField() {
     return Consumer(
       builder: (context, ref, _) {
         final state = ref.watch(activitySelectionNotifier);
-        return CustomEditText(
-          controller: state.descriptionController,
-          hintText: 'Text input...',
-          borderColor: appTheme.blue_gray_100,
-          backgroundColor: appTheme.white_A700,
-          hintTextColor: appTheme.gray_600,
+        return AIEnhancedTextField(
+          controller: state.descriptionController!,
+          hintText:
+              'Share your interests, goals, or what makes you a great walking companion...',
           contentPadding:
-              EdgeInsets.symmetric(horizontal: 12.h, vertical: 24.h),
+              EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
+          onChanged: (value) {
+            // Optional: Handle real-time changes
+          },
           validator: (value) => ref
               .read(activitySelectionNotifier.notifier)
               .validateDescription(value),

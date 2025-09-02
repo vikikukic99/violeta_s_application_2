@@ -19,7 +19,8 @@ class NearbyActivitiesNotifier extends StateNotifier<NearbyActivitiesState> {
   }
 
   void initialize() {
-    List<ActivityItemModel> activityItemsList = [
+    // Demo data with explicit categories
+    final activityItemsList = <ActivityItemModel>[
       ActivityItemModel(
         iconPath: ImageConstant.imgIWhiteA700,
         iconBackgroundColor: appTheme.green_500,
@@ -30,6 +31,7 @@ class NearbyActivitiesNotifier extends StateNotifier<NearbyActivitiesState> {
         statusTextColor: appTheme.amber_800,
         leaderImage: ImageConstant.imgDivWhiteA70024x22,
         leaderName: 'Sarah Johnson • Walk leader',
+        category: 'Walking',
       ),
       ActivityItemModel(
         iconPath: ImageConstant.imgIWhiteA70040x40,
@@ -41,6 +43,7 @@ class NearbyActivitiesNotifier extends StateNotifier<NearbyActivitiesState> {
         statusTextColor: appTheme.green_800,
         leaderImage: ImageConstant.imgDivWhiteA70024x22,
         leaderName: 'Sarah Johnson • Walk leader',
+        category: 'Running',
       ),
       ActivityItemModel(
         iconPath: ImageConstant.imgI40x40,
@@ -52,6 +55,7 @@ class NearbyActivitiesNotifier extends StateNotifier<NearbyActivitiesState> {
         statusTextColor: appTheme.blue_gray_800,
         leaderImage: ImageConstant.imgDivWhiteA70024x22,
         leaderName: 'Sarah Johnson • Walk leader',
+        category: 'Cycling',
       ),
       ActivityItemModel(
         iconPath: ImageConstant.imgI1,
@@ -63,6 +67,7 @@ class NearbyActivitiesNotifier extends StateNotifier<NearbyActivitiesState> {
         statusTextColor: appTheme.amber_800,
         leaderImage: ImageConstant.imgDivWhiteA70024x22,
         leaderName: 'Sarah Johnson • Walk leader',
+        category: 'Dog Walking',
       ),
       ActivityItemModel(
         iconPath: ImageConstant.imgI2,
@@ -74,6 +79,7 @@ class NearbyActivitiesNotifier extends StateNotifier<NearbyActivitiesState> {
         statusTextColor: appTheme.blue_gray_800,
         leaderImage: ImageConstant.imgDivWhiteA70024x22,
         leaderName: 'Sarah Johnson • Walk leader',
+        category: 'Walking', // treat hike as walking for filtering
       ),
     ];
 
@@ -82,11 +88,18 @@ class NearbyActivitiesNotifier extends StateNotifier<NearbyActivitiesState> {
         activityItemsList: activityItemsList,
       ),
       isLoading: false,
+      // keep selectedFilter as-is or default to All in state class
     );
   }
 
+  /// Update the selected category; keep value in both the state and model
   void selectFilter(String filterType) {
-    state = state.copyWith(selectedFilter: filterType);
+    final updatedModel =
+        state.nearbyActivitiesModel?.copyWith(selectedFilter: filterType);
+    state = state.copyWith(
+      selectedFilter: filterType,
+      nearbyActivitiesModel: updatedModel,
+    );
   }
 
   void refreshActivities() {

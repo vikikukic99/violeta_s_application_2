@@ -10,6 +10,7 @@ import './custom_image_view.dart';
  * - Customizable background color
  * - Optional logo image and title text
  * - Profile icon with tap functionality
+ * - Optional leading icon (e.g. back button)
  * - Responsive design using SizeUtils
  * - Implements PreferredSizeWidget for proper AppBar integration
  * 
@@ -17,8 +18,11 @@ import './custom_image_view.dart';
  * @param logoImage - Path to the logo image asset
  * @param title - Main title text to display
  * @param titleColor - Color for the title text
+ * @param titleTextStyle - Text style for the title text
  * @param profileIcon - Path to the profile icon asset
  * @param onProfileTap - Callback function when profile icon is tapped
+ * @param leadingIcon - Path to the optional leading icon asset
+ * @param onLeadingTap - Callback when the leading icon is tapped
  * @param height - Height of the app bar
  */
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -28,8 +32,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.logoImage,
     this.title,
     this.titleColor,
+    this.titleTextStyle,
     this.profileIcon,
     this.onProfileTap,
+    this.leadingIcon,
+    this.onLeadingTap,
     this.height,
   }) : super(key: key);
 
@@ -45,11 +52,20 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   /// Color for the title text
   final Color? titleColor;
 
+  /// Text style for the title
+  final TextStyle? titleTextStyle;
+
   /// Path to the profile icon asset
   final String? profileIcon;
 
   /// Callback function when profile icon is tapped
   final VoidCallback? onProfileTap;
+
+  /// Path to an optional leading icon (e.g. back button)
+  final String? leadingIcon;
+
+  /// Callback when the leading icon is tapped
+  final VoidCallback? onLeadingTap;
 
   /// Height of the app bar
   final double? height;
@@ -64,6 +80,31 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       automaticallyImplyLeading: false,
       toolbarHeight: height ?? 84.h,
+      leading: leadingIcon != null
+          ? GestureDetector(
+              onTap: onLeadingTap,
+              child: Container(
+                margin: EdgeInsets.only(left: 20.h),
+                padding: EdgeInsets.all(8.h),
+                decoration: BoxDecoration(
+                  color: appTheme.whiteCustom,
+                  borderRadius: BorderRadius.circular(16.h),
+                  boxShadow: [
+                    BoxShadow(
+                      color: appTheme.color190000,
+                      offset: Offset(0, 10),
+                      blurRadius: 15,
+                    ),
+                  ],
+                ),
+                child: CustomImageView(
+                  imagePath: leadingIcon!,
+                  height: 28.h,
+                  width: 16.h,
+                ),
+              ),
+            )
+          : null,
       title: Row(
         children: [
           if (logoImage != null) ...[
@@ -77,8 +118,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           if (title != null)
             Text(
               title!,
-              style: TextStyleHelper.instance.display50BoldPoppins.copyWith(
-                  color: titleColor ?? Color(0xFF4CAF50), height: 1.5),
+              style: titleTextStyle ??
+                  TextStyleHelper.instance.display50BoldPoppins.copyWith(
+                      color: titleColor ?? Color(0xFF4CAF50), height: 1.5),
             ),
         ],
       ),

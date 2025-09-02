@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../core/app_export.dart';
 import '../models/activity_model.dart';
@@ -52,6 +54,9 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
       activitiesList: activities,
       timeController: TextEditingController(text: '10:00'),
       descriptionController: TextEditingController(),
+      locationController: TextEditingController(),
+      citySearchResults: [],
+      isSearchingLocation: false,
     );
   }
 
@@ -78,6 +83,141 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
     setSelectedTime(now);
   }
 
+  // Location functionality
+  Future<void> searchCitiesByName(String query) async {
+    if (query.isEmpty) {
+      state = state.copyWith(citySearchResults: []);
+      return;
+    }
+
+    try {
+      state = state.copyWith(isSearchingLocation: true);
+      final locations = await locationFromAddress(query);
+
+      final List<String> cityResults = [];
+      for (final location in locations.take(5)) {
+        try {
+          final placemarks = await placemarkFromCoordinates(
+            location.latitude,
+            location.longitude,
+          );
+          if (placemarks.isNotEmpty) {
+            final placemark = placemarks.first;
+            final cityName =
+                '${placemark.locality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.country ?? ''}'
+                    .replaceAll(RegExp(r'^,|,$'), '')
+                    .replaceAll(', ,', ', ');
+            if (cityName.isNotEmpty && !cityResults.contains(cityName)) {
+              cityResults.add(cityName);
+            }
+          }
+        } catch (e) {
+          // Skip this location if reverse geocoding fails
+          continue;
+        }
+      }
+
+      state = state.copyWith(
+        citySearchResults: cityResults,
+        isSearchingLocation: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        citySearchResults: [],
+        isSearchingLocation: false,
+        locationError: 'Failed to search cities: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> getCurrentLocation() async {
+    try {
+      state = state.copyWith(isSearchingLocation: true, locationError: null);
+
+      // Check location permissions
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        state = state.copyWith(
+          isSearchingLocation: false,
+          locationError: 'Location services are disabled.',
+        );
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          state = state.copyWith(
+            isSearchingLocation: false,
+            locationError: 'Location permissions are denied',
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        state = state.copyWith(
+          isSearchingLocation: false,
+          locationError:
+              'Location permissions are permanently denied, please enable them in settings.',
+        );
+        return;
+      }
+
+      // Get current position
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 30),
+        ),
+      );
+
+      // Get city name from coordinates
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        final cityName =
+            '${placemark.locality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.country ?? ''}'
+                .replaceAll(RegExp(r'^,|,$'), '')
+                .replaceAll(', ,', ', ');
+
+        state.locationController?.text = cityName;
+        state = state.copyWith(
+          selectedCity: cityName,
+          currentPosition: position,
+          isSearchingLocation: false,
+        );
+      } else {
+        state = state.copyWith(
+          isSearchingLocation: false,
+          locationError: 'Could not determine city from current location',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isSearchingLocation: false,
+        locationError: 'Failed to get current location: ${e.toString()}',
+      );
+    }
+  }
+
+  void selectCity(String cityName) {
+    state.locationController?.text = cityName;
+    state = state.copyWith(
+      selectedCity: cityName,
+      citySearchResults: [],
+    );
+  }
+
+  void clearLocationError() {
+    state = state.copyWith(locationError: null);
+  }
+
   String? validateDescription(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Please tell us more about yourself';
@@ -101,5 +241,13 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
     // Clear form after successful submission
     state.descriptionController?.clear();
     state.timeController?.text = '10:00';
+  }
+
+  @override
+  void dispose() {
+    state.timeController?.dispose();
+    state.descriptionController?.dispose();
+    state.locationController?.dispose();
+    super.dispose();
   }
 }

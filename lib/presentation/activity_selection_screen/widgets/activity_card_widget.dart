@@ -25,7 +25,17 @@ class ActivityCardWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(12.h),
           border: Border.all(
             color: selected ? appTheme.green_500 : appTheme.gray_200,
+            width: 2.h, // Enhanced border width for better frame visibility
           ),
+          boxShadow: [
+            BoxShadow(
+              color: selected
+                  ? appTheme.green_500.withAlpha(51)
+                  : appTheme.black_900.withAlpha(13),
+              blurRadius: selected ? 8.h : 4.h,
+              offset: Offset(0, selected ? 4.h : 2.h),
+            ),
+          ],
         ),
         padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.h),
         child: Column(
@@ -35,23 +45,44 @@ class ActivityCardWidget extends StatelessWidget {
               height: 48.h,
               width: 48.h,
               decoration: BoxDecoration(
-                color: selected ? appTheme.white_A700 : appTheme.gray_100,
-                borderRadius: BorderRadius.circular(24.h),
+                color: selected ? appTheme.white_A700 : appTheme.gray_50,
+                borderRadius: BorderRadius.circular(
+                    12.h), // More rounded for better aesthetics
+                border: Border.all(
+                  color: selected
+                      ? appTheme.green_500.withAlpha(77)
+                      : appTheme.gray_200,
+                  width: 1.5.h, // Enhanced frame inside icons
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: selected
+                        ? appTheme.green_500.withAlpha(26)
+                        : appTheme.black_900.withAlpha(8),
+                    blurRadius: 2.h,
+                    offset: Offset(0, 1.h),
+                  ),
+                ],
               ),
-              padding: EdgeInsets.all(10.h),
-              child: CustomImageView(
-                imagePath: activity.iconPath ?? '',
-                fit: BoxFit.contain,
-                color: selected ? appTheme.green_500 : appTheme.blue_gray_800,
+              child: Center(
+                child: CustomImageView(
+                  imagePath: activity.iconPath ?? '',
+                  height: 24.h,
+                  width: 24.h,
+                  color: selected ? appTheme.green_600 : appTheme.blue_gray_700,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 12.h), // Increased spacing for better balance
             Text(
               activity.title ?? '',
-              style: TextStyleHelper.instance.title16MediumInter.copyWith(
+              style: TextStyleHelper.instance.body14MediumInter.copyWith(
                 color: selected ? appTheme.white_A700 : appTheme.blue_gray_800,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               ),
-            )
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

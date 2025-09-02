@@ -89,6 +89,7 @@ class ImageConstant {
   // Nearby Activities Screen
   static String imgNavChat = '${_basePath}img_nav_chat.svg';
   static String imgNavProfile = '${_basePath}img_nav_profile.svg';
+  static String imgNavWalktalk = '${_basePath}img_i_green_500.svg';
 
   // Onboarding Screen
   static String imgVectorBlueGray900 =

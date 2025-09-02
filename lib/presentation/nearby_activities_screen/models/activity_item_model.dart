@@ -13,6 +13,10 @@ class ActivityItemModel extends Equatable {
   String? leaderImage;
   String? leaderName;
 
+  /// NEW: normalized activity category used for filtering
+  /// Allowed values in this app: 'Walking', 'Running', 'Cycling', 'Dog Walking'
+  String? category;
+
   ActivityItemModel({
     this.iconPath,
     this.iconBackgroundColor,
@@ -23,16 +27,27 @@ class ActivityItemModel extends Equatable {
     this.statusTextColor,
     this.leaderImage,
     this.leaderName,
+    this.category, // NEW
   }) {
     iconPath = iconPath ?? '';
-    iconBackgroundColor = iconBackgroundColor ?? Color(0xFF4CAF50);
+    iconBackgroundColor = iconBackgroundColor ?? const Color(0xFF4CAF50);
     title = title ?? '';
     location = location ?? '';
     status = status ?? '';
-    statusBackgroundColor = statusBackgroundColor ?? Color(0x33FFD54F);
-    statusTextColor = statusTextColor ?? Color(0xFFFF8F00);
+    statusBackgroundColor = statusBackgroundColor ?? const Color(0x33FFD54F);
+    statusTextColor = statusTextColor ?? const Color(0xFFFF8F00);
     leaderImage = leaderImage ?? '';
     leaderName = leaderName ?? '';
+    category = _normalizeCategory(category ?? 'Walking');
+  }
+
+  /// Ensure we keep category values consistent
+  String _normalizeCategory(String raw) {
+    final v = raw.trim().toLowerCase();
+    if (v.contains('run')) return 'Running';
+    if (v.contains('cycl')) return 'Cycling';
+    if (v.contains('dog')) return 'Dog Walking';
+    return 'Walking';
   }
 
   @override
@@ -46,6 +61,7 @@ class ActivityItemModel extends Equatable {
         statusTextColor,
         leaderImage,
         leaderName,
+        category, // NEW
       ];
 
   ActivityItemModel copyWith({
@@ -58,6 +74,7 @@ class ActivityItemModel extends Equatable {
     Color? statusTextColor,
     String? leaderImage,
     String? leaderName,
+    String? category, // NEW
   }) {
     return ActivityItemModel(
       iconPath: iconPath ?? this.iconPath,
@@ -70,6 +87,7 @@ class ActivityItemModel extends Equatable {
       statusTextColor: statusTextColor ?? this.statusTextColor,
       leaderImage: leaderImage ?? this.leaderImage,
       leaderName: leaderName ?? this.leaderName,
+      category: category ?? this.category, // NEW
     );
   }
 }
