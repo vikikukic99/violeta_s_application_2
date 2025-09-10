@@ -2,86 +2,96 @@ import 'package:flutter/material.dart';
 
 import '../../../core/app_export.dart';
 import '../../../widgets/custom_image_view.dart';
-import '../models/activity_model.dart';
 
+/// Selectable activity card with clean glyph icons (no inner white frames).
 class ActivityCardWidget extends StatelessWidget {
-  final ActivityModel activity;
-  final VoidCallback? onTap;
-
   const ActivityCardWidget({
     Key? key,
     required this.activity,
     this.onTap,
   }) : super(key: key);
 
+  final dynamic activity;
+  final VoidCallback? onTap;
+
+  String _label(dynamic a) =>
+      (a?.title ?? a?.name ?? a?.label ?? 'Activity') as String;
+
+  String? _iconPath(dynamic a) => (a?.iconPath ?? a?.icon) as String?;
+
+  bool _isSelected(dynamic a) =>
+      (a?.isSelected ?? a?.selected ?? false) as bool;
+
+  /// Map common activity names/asset names to frameless Material glyphs.
+  IconData? _glyphFor(dynamic a) {
+    final label = _label(a).toLowerCase().trim();
+    final path = (_iconPath(a) ?? '').toLowerCase();
+
+    bool has(String s) => label.contains(s) || path.contains(s);
+
+    if (has('dog')) return Icons.pets_rounded;
+    if (has('cycl') || has('bike')) return Icons.pedal_bike_rounded;  // cycling ✅
+    if (has('run')) return Icons.directions_run_rounded;
+    if (has('walk')) return Icons.directions_walk_rounded;
+
+    return null; // unknown -> fallback to asset if provided
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool selected = activity.isSelected ?? false;
-    return GestureDetector(
+    final selected = _isSelected(activity);
+    final label = _label(activity);
+    final assetPath = _iconPath(activity);
+    final glyph = _glyphFor(activity);
+
+    final bg = selected ? appTheme.green_500 : appTheme.white_A700;
+    final border = selected ? Colors.transparent : appTheme.blue_gray_100;
+    final titleColor = selected ? appTheme.white_A700 : appTheme.blue_gray_900;
+    final iconColor = selected ? appTheme.white_A700 : appTheme.blue_gray_700;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16.h),
       onTap: onTap,
       child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 18.h),
         decoration: BoxDecoration(
-          color: selected ? appTheme.green_500 : appTheme.white_A700,
-          borderRadius: BorderRadius.circular(12.h),
-          border: Border.all(
-            color: selected ? appTheme.green_500 : appTheme.gray_200,
-            width: 2.h, // Enhanced border width for better frame visibility
-          ),
+          color: bg,
+          borderRadius: BorderRadius.circular(16.h),
+          border: Border.all(color: border, width: 1.h),
           boxShadow: [
-            BoxShadow(
-              color: selected
-                  ? appTheme.green_500.withAlpha(51)
-                  : appTheme.black_900.withAlpha(13),
-              blurRadius: selected ? 8.h : 4.h,
-              offset: Offset(0, selected ? 4.h : 2.h),
-            ),
+            if (!selected)
+              BoxShadow(
+                color: appTheme.color0C0000,
+                blurRadius: 8.h,
+                offset: const Offset(0, 2),
+              ),
           ],
         ),
-        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.h),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              height: 48.h,
-              width: 48.h,
-              decoration: BoxDecoration(
-                color: selected ? appTheme.white_A700 : appTheme.gray_50,
-                borderRadius: BorderRadius.circular(
-                    12.h), // More rounded for better aesthetics
-                border: Border.all(
-                  color: selected
-                      ? appTheme.green_500.withAlpha(77)
-                      : appTheme.gray_200,
-                  width: 1.5.h, // Enhanced frame inside icons
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: selected
-                        ? appTheme.green_500.withAlpha(26)
-                        : appTheme.black_900.withAlpha(8),
-                    blurRadius: 2.h,
-                    offset: Offset(0, 1.h),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: CustomImageView(
-                  imagePath: activity.iconPath ?? '',
-                  height: 24.h,
-                  width: 24.h,
-                  color: selected ? appTheme.green_600 : appTheme.blue_gray_700,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            SizedBox(height: 12.h), // Increased spacing for better balance
+            // Show a clean Material glyph when we recognize the activity.
+            if (glyph != null)
+              Icon(glyph, size: 28.h, color: iconColor)
+            else if (assetPath != null && assetPath.isNotEmpty)
+              // Fallback to provided asset (tinted if vector).
+              CustomImageView(
+                imagePath: assetPath,
+                height: 28.h,
+                width: 28.h,
+                color: iconColor,
+              )
+            else
+              Icon(Icons.sports_handball_rounded, size: 28.h, color: iconColor),
+
+            SizedBox(height: 10.h),
             Text(
-              activity.title ?? '',
-              style: TextStyleHelper.instance.body14MediumInter.copyWith(
-                color: selected ? appTheme.white_A700 : appTheme.blue_gray_800,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              ),
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
+              style: TextStyleHelper.instance.title14MediumPoppins
+                  .copyWith(color: titleColor),
             ),
           ],
         ),

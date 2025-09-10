@@ -3,43 +3,19 @@ import 'package:flutter/material.dart';
 import '../core/app_export.dart';
 import './custom_image_view.dart';
 
-/**
- * A customizable button widget that supports various styles, icons, and layouts.
- * 
- * This widget provides a flexible button implementation that can handle:
- * - Text-only buttons
- * - Buttons with left or right icons
- * - Various background colors and border styles
- * - Different padding and sizing options
- * - Custom text styles and colors
- * - Navigation and callback functionality
- * - Responsive design across different screen sizes
- * 
- * @param text - The button text content (required)
- * @param onPressed - Callback function when button is tapped
- * @param leftIcon - Path to left icon image (SVG/PNG)
- * @param rightIcon - Path to right icon image (SVG/PNG)
- * @param backgroundColor - Background color of the button
- * @param textColor - Color of the button text
- * @param borderColor - Color of the button border
- * @param borderWidth - Width of the button border
- * @param borderRadius - Border radius of the button
- * @param fontSize - Font size of the button text
- * @param fontWeight - Font weight of the button text
- * @param fontFamily - Font family of the button text
- * @param padding - Custom padding for the button
- * @param width - Width behavior of the button
- * @param height - Custom height for the button
- * @param elevation - Shadow elevation of the button
- * @param isEnabled - Whether the button is enabled or disabled
- */
-class CustomButton extends StatelessWidget {
+/// A flexible, animated button with optional icons on either side.
+/// - Use [leftIcon]/[rightIcon] to pass asset paths (PNG/SVG) — keeps backward compatibility.
+/// - Prefer [leftIconWidget]/[rightIconWidget] for *frameless* Material icons so you
+///   avoid baked-in backgrounds in assets (e.g. the white square you’re seeing).
+class CustomButton extends StatefulWidget {
   const CustomButton({
     Key? key,
     required this.text,
     this.onPressed,
     this.leftIcon,
     this.rightIcon,
+    this.leftIconWidget,
+    this.rightIconWidget,
     this.backgroundColor,
     this.textColor,
     this.borderColor,
@@ -53,124 +29,160 @@ class CustomButton extends StatelessWidget {
     this.height,
     this.elevation,
     this.isEnabled = true,
+    this.enableIconSlide = true,
   }) : super(key: key);
 
-  /// The text content of the button
+  /// Button label
   final String text;
 
-  /// Callback function triggered when button is pressed
+  /// Tap callback
   final VoidCallback? onPressed;
 
-  /// Path to the left icon image
+  /// (Legacy) asset paths (PNG/SVG). Prefer the Widget variants below.
   final String? leftIcon;
-
-  /// Path to the right icon image
   final String? rightIcon;
 
-  /// Background color of the button
+  /// Modern, frameless icon slots (e.g., `Icon(Icons.arrow_forward_rounded)`).
+  final Widget? leftIconWidget;
+  final Widget? rightIconWidget;
+
   final Color? backgroundColor;
-
-  /// Text color of the button
   final Color? textColor;
-
-  /// Border color of the button
   final Color? borderColor;
-
-  /// Width of the button border
   final double? borderWidth;
-
-  /// Border radius of the button
   final double? borderRadius;
-
-  /// Font size of the button text
   final double? fontSize;
-
-  /// Font weight of the button text
   final FontWeight? fontWeight;
-
-  /// Font family of the button text
   final String? fontFamily;
-
-  /// Custom padding for the button
   final EdgeInsets? padding;
-
-  /// Width behavior of the button
   final double? width;
-
-  /// Custom height for the button
   final double? height;
-
-  /// Shadow elevation of the button
   final double? elevation;
-
-  /// Whether the button is enabled
   final bool isEnabled;
+
+  /// If true, the right icon slides slightly on press.
+  final bool enableIconSlide;
+
+  @override
+  State<CustomButton> createState() => _CustomButtonState();
+}
+
+class _CustomButtonState extends State<CustomButton> {
+  bool _pressed = false;
+
+  Widget _buildLeftIcon() {
+    if (widget.leftIconWidget != null) return widget.leftIconWidget!;
+    if (widget.leftIcon != null) {
+      return CustomImageView(
+        imagePath: widget.leftIcon!,
+        height: 20.h,
+        width: 20.h,
+        fit: BoxFit.contain,
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildRightIcon() {
+    final child = widget.rightIconWidget ??
+        (widget.rightIcon != null
+            ? CustomImageView(
+                imagePath: widget.rightIcon!,
+                height: 20.h,
+                width: 20.h,
+                fit: BoxFit.contain,
+              )
+            : const SizedBox.shrink());
+
+    if (!widget.enableIconSlide) return child;
+
+    // Slide the right icon a bit when pressed for a lively feel
+    return AnimatedSlide(
+      duration: const Duration(milliseconds: 140),
+      offset: _pressed ? const Offset(0.12, 0) : Offset.zero,
+      curve: Curves.easeOut,
+      child: child,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
+    final bg = widget.backgroundColor ?? appTheme.green_500;
+    final radius = BorderRadius.circular(widget.borderRadius ?? 8.h);
+    final shadowElevation = (widget.elevation ?? 0);
+    final textStyle = TextStyleHelper.instance.textStyle30.copyWith(
+      color: widget.textColor ?? appTheme.whiteCustom,
+      height: 1.2,
+      fontSize: widget.fontSize,
+      fontWeight: widget.fontWeight,
+      fontFamily: widget.fontFamily,
+    );
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      width: widget.width ?? double.infinity,
+      height: widget.height,
+      transform: Matrix4.identity()
+        ..translate(0.0, _pressed ? 1.0 : 0.0), // tiny press depth
       decoration: BoxDecoration(
-        color: backgroundColor ?? appTheme.transparentCustom,
-        border: borderColor != null
+        color: bg,
+        borderRadius: radius,
+        border: widget.borderColor != null
             ? Border.all(
-                color: borderColor!,
-                width: borderWidth ?? 1.h,
+                color: widget.borderColor!,
+                width: widget.borderWidth ?? 1.h,
               )
             : null,
-        borderRadius: BorderRadius.circular(borderRadius ?? 8.h),
-        boxShadow: elevation != null && elevation! > 0
+        boxShadow: shadowElevation > 0
             ? [
                 BoxShadow(
-                  color: appTheme.blackCustom.withAlpha(26),
-                  blurRadius: elevation!,
-                  offset: Offset(0, elevation! / 2),
+                  color: appTheme.blackCustom.withAlpha(_pressed ? 12 : 26),
+                  blurRadius: shadowElevation,
+                  offset: Offset(0, shadowElevation / 2),
                 ),
               ]
             : null,
       ),
       child: Material(
-        color: appTheme.transparentCustom,
+        color: Colors.transparent,
         child: InkWell(
-          onTap: isEnabled ? onPressed : null,
-          borderRadius: BorderRadius.circular(borderRadius ?? 8.h),
-          child: Container(
-            padding: padding ??
+          onTap: widget.isEnabled ? widget.onPressed : null,
+          borderRadius: radius,
+          onHighlightChanged: (v) {
+            setState(() => _pressed = v);
+          },
+          child: Padding(
+            padding: widget.padding ??
                 EdgeInsets.symmetric(
-                  vertical: 12.h,
-                  horizontal: 30.h,
+                  vertical: 14.h,
+                  horizontal: 18.h,
                 ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (leftIcon != null) ...[
-                  CustomImageView(
-                    imagePath: leftIcon!,
-                    height: 20.h,
-                    width: 20.h,
-                    fit: BoxFit.contain,
-                  ),
-                  SizedBox(width: 8.h),
-                ],
+                // Left icon
+                if (widget.leftIcon != null || widget.leftIconWidget != null)
+                  ...[
+                    _buildLeftIcon(),
+                    SizedBox(width: 10.h),
+                  ],
+
+                // Label
                 Flexible(
                   child: Text(
-                    text,
-                    style: TextStyleHelper.instance.textStyle30.copyWith(
-                        color: textColor ?? appTheme.whiteCustom, height: 1.2),
+                    widget.text,
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
+                    style: textStyle,
                   ),
                 ),
-                if (rightIcon != null) ...[
-                  SizedBox(width: 8.h),
-                  CustomImageView(
-                    imagePath: rightIcon!,
-                    height: 20.h,
-                    width: 20.h,
-                    fit: BoxFit.contain,
-                  ),
+
+                // Right icon
+                if (widget.rightIcon != null ||
+                    widget.rightIconWidget != null) ...[
+                  SizedBox(width: 10.h),
+                  _buildRightIcon(),
                 ],
               ],
             ),
@@ -182,7 +194,6 @@ class CustomButton extends StatelessWidget {
 }
 
 class CustomButtonStyles {
-  // Base button styles
   static ButtonStyle get fillPrimary => ElevatedButton.styleFrom(
         backgroundColor: appTheme.green_500,
         shape: RoundedRectangleBorder(

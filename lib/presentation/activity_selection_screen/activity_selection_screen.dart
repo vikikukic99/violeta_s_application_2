@@ -19,6 +19,15 @@ class ActivitySelectionScreenState
     extends ConsumerState<ActivitySelectionScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
+  // Local fallback suggestions (used by the AI Assistant popup).
+  // If you later expose suggestions from your notifier, you can replace this.
+  static const List<String> _aiSuggestions = [
+    'I love exploring new walking routes and discovering hidden gems in the city.',
+    'Looking for motivated fitness companions who enjoy morning walks and healthy conversations.',
+    'Passionate about wellness and building meaningful connections through shared activities.',
+    'I’m training for a 5K and would love accountability buddies for weekend runs.',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -43,36 +52,59 @@ class ActivitySelectionScreenState
                       .copyWith(color: appTheme.gray_600),
                 ),
                 SizedBox(height: 24.h),
+
+                /// Activities grid (Walking, Dog Walking, Cycling, Running…)
                 _buildActivitiesGrid(),
+
                 SizedBox(height: 24.h),
                 Text(
                   'Location',
                   style: TextStyleHelper.instance.body14MediumPoppins,
                 ),
                 SizedBox(height: 8.h),
+
+                /// Location input with “use my location” button + error + results
                 _buildLocationField(),
+
                 SizedBox(height: 24.h),
                 Text(
                   'Start time',
                   style: TextStyleHelper.instance.body14MediumPoppins,
                 ),
                 SizedBox(height: 12.h),
+
+                /// Time field + “Start now”
                 _buildTimeSelectionRow(),
+
                 SizedBox(height: 24.h),
                 Text(
                   'Tell us more about you.',
                   style: TextStyleHelper.instance.headline24BoldInter,
                 ),
                 SizedBox(height: 16.h),
+
+                /// Description with AI-enhanced text field
                 _buildAIEnhancedDescriptionField(),
+
+                /// Small AI Assistant chip that opens a popup of suggestions
+                SizedBox(height: 12.h),
+                _buildAiAssistantChip(),
+
                 SizedBox(height: 40.h),
+
+                /// Continue — uses frameless Material icon (no white box)
                 CustomButton(
                   text: 'Continue',
                   backgroundColor: appTheme.green_500,
                   textColor: appTheme.white_A700,
-                  rightIcon: ImageConstant.imgI,
-                  onPressed: () => onTapContinue(context),
+                  rightIconWidget: Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 18.h,
+                    color: appTheme.white_A700,
+                  ),
+                  elevation: 6,
                   width: double.infinity,
+                  onPressed: () => onTapContinue(context),
                 ),
               ],
             ),
@@ -133,9 +165,7 @@ class ActivitySelectionScreenState
                 ),
                 SizedBox(width: 12.h),
                 GestureDetector(
-                  onTap: () {
-                    notifier.getCurrentLocation();
-                  },
+                  onTap: () => notifier.getCurrentLocation(),
                   child: Container(
                     width: 48.h,
                     height: 48.h,
@@ -144,10 +174,10 @@ class ActivitySelectionScreenState
                       borderRadius: BorderRadius.circular(8.h),
                     ),
                     child: state.isSearchingLocation == true
-                        ? SizedBox(
-                            height: 20.h,
-                            width: 20.h,
-                            child: Center(
+                        ? Center(
+                            child: SizedBox(
+                              height: 20.h,
+                              width: 20.h,
                               child: CircularProgressIndicator(
                                 color: appTheme.white_A700,
                                 strokeWidth: 2,
@@ -163,6 +193,8 @@ class ActivitySelectionScreenState
                 ),
               ],
             ),
+
+            /// Error bubble
             if (state.locationError != null) ...[
               SizedBox(height: 8.h),
               Container(
@@ -193,6 +225,8 @@ class ActivitySelectionScreenState
                 ),
               ),
             ],
+
+            /// Autocomplete list
             if (state.citySearchResults?.isNotEmpty == true) ...[
               SizedBox(height: 8.h),
               Container(
@@ -223,9 +257,9 @@ class ActivitySelectionScreenState
                         city,
                         style: TextStyleHelper.instance.body14RegularInter,
                       ),
-                      onTap: () {
-                        notifier.selectCity(city);
-                      },
+                      onTap: () => ref
+                          .read(activitySelectionNotifier.notifier)
+                          .selectCity(city),
                       contentPadding: EdgeInsets.symmetric(horizontal: 16.h),
                       dense: true,
                     );
@@ -282,7 +316,7 @@ class ActivitySelectionScreenState
           contentPadding:
               EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
           onChanged: (value) {
-            // Optional: Handle real-time changes
+            // Optional: react to edits if needed
           },
           validator: (value) => ref
               .read(activitySelectionNotifier.notifier)
@@ -292,12 +326,113 @@ class ActivitySelectionScreenState
     );
   }
 
+  Widget _buildAiAssistantChip() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16.h),
+        onTap: _showAiSuggestionsSheet,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 8.h),
+          decoration: BoxDecoration(
+            color: appTheme.green_100,
+            borderRadius: BorderRadius.circular(16.h),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_awesome, size: 16.h, color: appTheme.green_600),
+              SizedBox(width: 6.h),
+              Text(
+                'AI Assistant',
+                style: TextStyleHelper.instance.body12MediumPoppins
+                    .copyWith(color: appTheme.green_600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showTimePicker(BuildContext context) async {
     final TimeOfDay? picked =
         await showTimePicker(context: context, initialTime: TimeOfDay.now());
     if (picked != null) {
       ref.read(activitySelectionNotifier.notifier).setSelectedTime(picked);
     }
+  }
+
+  /// Bottom sheet with quick suggestions. Tapping a suggestion inserts it into
+  /// the description text field and closes the sheet.
+  void _showAiSuggestionsSheet() {
+    final controller =
+        ref.read(activitySelectionNotifier).descriptionController!;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: appTheme.white_A700,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.h)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16.h, 12.h, 16.h, 16.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40.h,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: appTheme.blue_gray_100,
+                      borderRadius: BorderRadius.circular(2.h),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  'AI Suggestions',
+                  style: TextStyleHelper.instance.title16SemiBoldPoppins
+                      .copyWith(color: appTheme.blue_gray_900),
+                ),
+                SizedBox(height: 8.h),
+                ..._aiSuggestions.map(
+                  (s) => Padding(
+                    padding: EdgeInsets.only(top: 8.h),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12.h),
+                      onTap: () {
+                        controller.text = s;
+                        controller.selection = TextSelection.collapsed(
+                          offset: controller.text.length,
+                        );
+                        Navigator.of(context).pop();
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(12.h),
+                        decoration: BoxDecoration(
+                          color: appTheme.green_100,
+                          borderRadius: BorderRadius.circular(12.h),
+                        ),
+                        child: Text(
+                          s,
+                          style: TextStyleHelper.instance.body14RegularInter
+                              .copyWith(color: appTheme.blue_gray_800),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void onTapContinue(BuildContext context) {

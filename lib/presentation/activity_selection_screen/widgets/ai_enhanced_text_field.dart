@@ -1,134 +1,118 @@
+// lib/presentation/activity_selection_screen/widgets/ai_enhanced_text_field.dart
 import 'package:flutter/material.dart';
+import '../../../core/app_export.dart'; // appTheme + TextStyleHelper
 
-import '../../../core/app_export.dart';
-import '../../../services/openai_client.dart';
-import '../../../services/openai_service.dart';
-
+/// Text field with an "AI Assistant" button.
+/// When the button is tapped, a bottom-sheet pops up with suggestions.
+/// Tapping a suggestion inserts it into the field automatically.
 class AIEnhancedTextField extends StatefulWidget {
-  final TextEditingController controller;
-  final String hintText;
-  final Function(String)? onChanged;
-  final String? Function(String?)? validator;
-  final EdgeInsetsGeometry? contentPadding;
-
   const AIEnhancedTextField({
     Key? key,
     required this.controller,
-    this.hintText = 'Tell us about yourself...',
+    this.hintText,
+    this.contentPadding,
     this.onChanged,
     this.validator,
-    this.contentPadding,
+    this.suggestions,
   }) : super(key: key);
+
+  final TextEditingController controller;
+  final String? hintText;
+  final EdgeInsets? contentPadding;
+  final ValueChanged<String>? onChanged;
+  final String? Function(String?)? validator;
+  final List<String>? suggestions;
 
   @override
   State<AIEnhancedTextField> createState() => _AIEnhancedTextFieldState();
 }
 
 class _AIEnhancedTextFieldState extends State<AIEnhancedTextField> {
-  final FocusNode _focusNode = FocusNode();
-  bool _isAILoading = false;
-  bool _showSuggestions = false;
-  List<String> _suggestions = [];
-  OpenAIClient? _openAIClient;
+  late final List<String> _suggestions;
 
   @override
   void initState() {
     super.initState();
-    _initializeAI();
-    _focusNode.addListener(_onFocusChange);
+    _suggestions = widget.suggestions ??
+        const [
+          "I love exploring new walking routes and discovering hidden gems in the city.",
+          "Looking for motivated fitness companions who enjoy morning walks and healthy conversations.",
+          "Passionate about wellness and building meaningful connections through shared activities.",
+        ];
   }
 
-  void _initializeAI() {
-    try {
-      final service = OpenAIService();
-      _openAIClient = OpenAIClient(service.dio);
-    } catch (e) {
-      // AI features will be disabled if API key not available
-      _openAIClient = null;
-    }
+  void _applySuggestion(String text) {
+    widget.controller.text = text;
+    widget.controller.selection =
+        TextSelection.fromPosition(TextPosition(offset: text.length));
+    widget.onChanged?.call(text);
+    Navigator.of(context).maybePop(); // close the sheet if open
+    setState(() {}); // optional visual refresh
   }
 
-  void _onFocusChange() {
-    if (_focusNode.hasFocus && _openAIClient != null) {
-      _generateSuggestions();
-    } else {
-      setState(() {
-        _showSuggestions = false;
-      });
-    }
-  }
+  Future<void> _openAISuggestionsSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: false,
+      backgroundColor: appTheme.white_A700,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.h)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.h, vertical: 12.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Grab handle
+                Container(
+                  width: 40.h,
+                  height: 4.h,
+                  margin: EdgeInsets.only(bottom: 12.h),
+                  decoration: BoxDecoration(
+                    color: appTheme.blue_gray_100,
+                    borderRadius: BorderRadius.circular(2.h),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Icon(Icons.auto_awesome,
+                        size: 18.h, color: appTheme.green_600),
+                    SizedBox(width: 8.h),
+                    Text(
+                      'AI Suggestions',
+                      style: TextStyleHelper.instance.title16SemiBoldPoppins
+                          .copyWith(color: appTheme.blue_gray_900),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
 
-  Future<void> _generateSuggestions() async {
-    if (_openAIClient == null) return;
-
-    setState(() {
-      _isAILoading = true;
-    });
-
-    try {
-      final suggestions = await _openAIClient!.generateSuggestions(
-        userInput: widget.controller.text,
-        context:
-            'User is describing themselves for finding walking and fitness buddies',
-        maxSuggestions: 3,
-      );
-
-      setState(() {
-        _suggestions = suggestions;
-        _showSuggestions = suggestions.isNotEmpty;
-        _isAILoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isAILoading = false;
-        _showSuggestions = false;
-      });
-    }
-  }
-
-  Future<void> _enhanceText() async {
-    if (_openAIClient == null || widget.controller.text.trim().isEmpty) return;
-
-    setState(() {
-      _isAILoading = true;
-    });
-
-    try {
-      final enhancedText = await _openAIClient!.enhanceText(
-        originalText: widget.controller.text,
-        style: 'friendly',
-      );
-
-      widget.controller.text = enhancedText;
-      if (widget.onChanged != null) {
-        widget.onChanged!(enhancedText);
-      }
-
-      setState(() {
-        _isAILoading = false;
-        _showSuggestions = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isAILoading = false;
-      });
-    }
-  }
-
-  void _applySuggestion(String suggestion) {
-    widget.controller.text = suggestion;
-    if (widget.onChanged != null) {
-      widget.onChanged!(suggestion);
-    }
-    setState(() {
-      _showSuggestions = false;
-    });
-  }
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
+                // Suggestions list
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _suggestions.length,
+                    separatorBuilder: (_, __) =>
+                        SizedBox(height: 8.h),
+                    itemBuilder: (context, index) {
+                      final s = _suggestions[index];
+                      return _SuggestionTile(
+                        text: s,
+                        onTap: () => _applySuggestion(s),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 8.h),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -136,168 +120,111 @@ class _AIEnhancedTextFieldState extends State<AIEnhancedTextField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: appTheme.white_A700,
-            borderRadius: BorderRadius.circular(12.h),
-            border: Border.all(
-              color: _focusNode.hasFocus
-                  ? appTheme.green_500
-                  : appTheme.blue_gray_100,
-              width: 1.5.h,
+        // The main input
+        TextFormField(
+          controller: widget.controller,
+          validator: widget.validator,
+          maxLines: 5,
+          minLines: 3,
+          onChanged: widget.onChanged,
+          decoration: InputDecoration(
+            hintText: widget.hintText ?? 'Type here…',
+            hintStyle: TextStyleHelper.instance.body14RegularInter
+                .copyWith(color: appTheme.blue_gray_300),
+            filled: true,
+            fillColor: appTheme.white_A700,
+            contentPadding: widget.contentPadding ?? EdgeInsets.all(16.h),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: appTheme.blue_gray_100),
+              borderRadius: BorderRadius.circular(12.h),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: appTheme.black_900.withAlpha(13),
-                blurRadius: 8.h,
-                offset: Offset(0, 2.h),
-              ),
-            ],
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: appTheme.green_500, width: 1.5),
+              borderRadius: BorderRadius.circular(12.h),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: appTheme.deep_orange_A700),
+              borderRadius: BorderRadius.circular(12.h),
+            ),
           ),
-          child: Column(
-            children: [
-              TextFormField(
-                controller: widget.controller,
-                focusNode: _focusNode,
-                onChanged: widget.onChanged,
-                validator: widget.validator,
-                maxLines: 4,
-                minLines: 3,
-                decoration: InputDecoration(
-                  hintText: widget.hintText,
-                  hintStyle: TextStyleHelper.instance.body14RegularInter
-                      .copyWith(color: appTheme.gray_600),
-                  border: InputBorder.none,
-                  contentPadding: widget.contentPadding ??
-                      EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
-                ),
-                style: TextStyleHelper.instance.body14RegularInter,
+          style: TextStyleHelper.instance.body14RegularInter
+              .copyWith(color: appTheme.blue_gray_800, height: 1.4),
+        ),
+        SizedBox(height: 10.h),
+
+        // AI Assistant pill (opens the sheet)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10.h),
+            onTap: _openAISuggestionsSheet,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.h, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: appTheme.green_50,
+                borderRadius: BorderRadius.circular(10.h),
+                border: Border.all(color: appTheme.green_100),
               ),
-              if (_openAIClient != null)
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.h, vertical: 8.h),
-                  decoration: BoxDecoration(
-                    color: appTheme.gray_50,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(12.h),
-                      bottomRight: Radius.circular(12.h),
-                    ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.auto_awesome,
+                      size: 16.h, color: appTheme.green_600),
+                  SizedBox(width: 6.h),
+                  Text(
+                    'AI Assistant',
+                    style: TextStyleHelper.instance.body12MediumPoppins
+                        .copyWith(color: appTheme.green_600),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.auto_awesome,
-                        size: 16.h,
-                        color: appTheme.green_500,
-                      ),
-                      SizedBox(width: 8.h),
-                      Expanded(
-                        child: Text(
-                          'AI Assistant',
-                          style: TextStyleHelper.instance.body12RegularInter
-                              .copyWith(color: appTheme.gray_600),
-                        ),
-                      ),
-                      if (_isAILoading)
-                        SizedBox(
-                          height: 16.h,
-                          width: 16.h,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: appTheme.green_500,
-                          ),
-                        ),
-                      if (!_isAILoading &&
-                          widget.controller.text.trim().isNotEmpty)
-                        GestureDetector(
-                          onTap: _enhanceText,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 8.h, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: appTheme.green_500,
-                              borderRadius: BorderRadius.circular(4.h),
-                            ),
-                            child: Text(
-                              'Enhance',
-                              style: TextStyleHelper.instance.body12RegularInter
-                                  .copyWith(color: appTheme.white_A700),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
-        if (_showSuggestions && _suggestions.isNotEmpty) ...[
-          SizedBox(height: 12.h),
-          Container(
-            padding: EdgeInsets.all(16.h),
-            decoration: BoxDecoration(
-              color: appTheme.white_A700,
-              borderRadius: BorderRadius.circular(12.h),
-              border: Border.all(color: appTheme.green_100),
-              boxShadow: [
-                BoxShadow(
-                  color: appTheme.green_500.withAlpha(26),
-                  blurRadius: 8.h,
-                  offset: Offset(0, 2.h),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.lightbulb_outline,
-                      size: 16.h,
-                      color: appTheme.green_500,
-                    ),
-                    SizedBox(width: 8.h),
-                    Text(
-                      'AI Suggestions',
-                      style: TextStyleHelper.instance.body12MediumInter
-                          .copyWith(color: appTheme.green_600),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-                ...List.generate(
-                  _suggestions.length,
-                  (index) => Padding(
-                    padding: EdgeInsets.only(bottom: 8.h),
-                    child: GestureDetector(
-                      onTap: () => _applySuggestion(_suggestions[index]),
-                      child: Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(12.h),
-                        decoration: BoxDecoration(
-                          color: appTheme.green_50,
-                          borderRadius: BorderRadius.circular(8.h),
-                          border: Border.all(
-                            color: appTheme.green_100,
-                            width: 1.h,
-                          ),
-                        ),
-                        child: Text(
-                          _suggestions[index],
-                          style: TextStyleHelper.instance.body12RegularInter
-                              .copyWith(color: appTheme.blue_gray_800),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ],
+    );
+  }
+}
+
+class _SuggestionTile extends StatelessWidget {
+  const _SuggestionTile({
+    Key? key,
+    required this.text,
+    required this.onTap,
+  }) : super(key: key);
+
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12.h),
+      onTap: onTap,
+      child: Container
+      (
+        width: double.infinity,
+        padding: EdgeInsets.all(12.h),
+        decoration: BoxDecoration(
+          color: appTheme.green_50,
+          borderRadius: BorderRadius.circular(12.h),
+          border: Border.all(color: appTheme.green_100),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.bolt_rounded, size: 18.h, color: appTheme.green_600),
+            SizedBox(width: 8.h),
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyleHelper.instance.body12RegularInter
+                    .copyWith(color: appTheme.blue_gray_800, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

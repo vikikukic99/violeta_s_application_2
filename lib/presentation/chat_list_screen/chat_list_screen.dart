@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_export.dart';
-import '../../widgets/custom_bottom_bar.dart';
+import '../../core/utils/image_constant.dart';
+import '../../core/utils/navigator_service.dart';
+import '../../routes/app_routes.dart';
+import '../../theme/text_style_helper.dart';
 import '../../widgets/custom_image_view.dart';
 
 class ChatListScreen extends StatelessWidget {
-  const ChatListScreen({Key? key, this.showLocalBottomBar = true})
-      : super(key: key);
-
+  /// Allows callers to hide a local bottom bar if the screen is already shown
+  /// inside a shell that provides a global bottom navigation.
   final bool showLocalBottomBar;
+
+  const ChatListScreen({
+    Key? key,
+    this.showLocalBottomBar = true, // keeps existing calls working
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +31,8 @@ class ChatListScreen extends StatelessWidget {
           centerTitle: true,
           title: Text(
             'Messages',
-            style: TextStyleHelper.instance.title20BoldPoppins
+            style: TextStyleHelper.instance
+                .title20BoldPoppins
                 .copyWith(color: appTheme.blue_gray_900),
           ),
           actions: [
@@ -46,7 +54,6 @@ class ChatListScreen extends StatelessWidget {
             child: Container(height: 1.h, color: appTheme.blue_gray_100),
           ),
         ),
-
         body: ListView.separated(
           padding: EdgeInsets.symmetric(vertical: 8.h),
           physics: const BouncingScrollPhysics(),
@@ -60,7 +67,6 @@ class ChatListScreen extends StatelessWidget {
             final item = chats[index];
             return InkWell(
               onTap: () {
-                // Open single conversation screen with the chosen person
                 NavigatorService.pushNamed(
                   AppRoutes.chatConversationScreen,
                   arguments: {'name': item.name},
@@ -76,8 +82,7 @@ class ChatListScreen extends StatelessWidget {
                       width: 44.h,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border:
-                            Border.all(color: appTheme.white_A700, width: 2.h),
+                        border: Border.all(color: appTheme.white_A700, width: 2.h),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withAlpha(20),
@@ -88,8 +93,8 @@ class ChatListScreen extends StatelessWidget {
                       ),
                       child: ClipOval(
                         child: CustomImageView(
-                          imagePath: item.imagePath ??
-                              ImageConstant.imgDivWhiteA70024x22,
+                          imagePath:
+                              item.imagePath ?? ImageConstant.imgDivWhiteA70024x22,
                           height: 44.h,
                           width: 44.h,
                           fit: BoxFit.cover,
@@ -98,7 +103,7 @@ class ChatListScreen extends StatelessWidget {
                     ),
                     SizedBox(width: 12.h),
 
-                    // Name + snippet + time + unread
+                    // Name + last message
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,16 +115,16 @@ class ChatListScreen extends StatelessWidget {
                                   item.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyleHelper
-                                      .instance.title16SemiBoldPoppins
+                                  style: TextStyleHelper.instance
+                                      .title16SemiBoldPoppins
                                       .copyWith(color: appTheme.blue_gray_900),
                                 ),
                               ),
                               SizedBox(width: 8.h),
                               Text(
                                 item.time,
-                                style: TextStyleHelper
-                                    .instance.body12RegularPoppins
+                                style: TextStyleHelper.instance
+                                    .body12RegularPoppins
                                     .copyWith(color: appTheme.blue_gray_300),
                               ),
                             ],
@@ -133,8 +138,8 @@ class ChatListScreen extends StatelessWidget {
                                   item.lastMessage,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyleHelper
-                                      .instance.body14RegularPoppins
+                                  style: TextStyleHelper.instance
+                                      .body14RegularPoppins
                                       .copyWith(color: appTheme.blue_gray_700),
                                 ),
                               ),
@@ -149,8 +154,8 @@ class ChatListScreen extends StatelessWidget {
                                   ),
                                   child: Text(
                                     '${item.unreadCount}',
-                                    style: TextStyleHelper
-                                        .instance.body12MediumPoppins
+                                    style: TextStyleHelper.instance
+                                        .body12MediumPoppins
                                         .copyWith(color: appTheme.white_A700),
                                   ),
                                 ),
@@ -166,15 +171,9 @@ class ChatListScreen extends StatelessWidget {
             );
           },
         ),
-
-        // Standardized bottom navigation bar
-        bottomNavigationBar: showLocalBottomBar
-            ? CustomBottomBar(
-                selectedIndex: 0, // Chat is selected
-                onChanged: (index) =>
-                    CustomBottomBar.handleNavigation(context, index),
-              )
-            : null,
+        // Keep nav bar behavior the same as your app now; we don’t add another one here.
+        // If you ever want a local bar on this screen specifically, you can wire it like:
+        // bottomNavigationBar: showLocalBottomBar ? YourBottomBarWidget() : null,
       ),
     );
   }
@@ -194,7 +193,7 @@ class _ChatListItem {
     required this.lastMessage,
     required this.time,
     this.unreadCount = 0,
-    this.imagePath, // Add this line
+    this.imagePath,
   });
 }
 
@@ -209,6 +208,7 @@ final List<_ChatListItem> _mockChats = [
     name: 'David Chen',
     lastMessage: 'I\'ve sent you the project files.',
     time: 'Yesterday',
+    unreadCount: 0,
   ),
   _ChatListItem(
     name: 'Emma Wilson',
