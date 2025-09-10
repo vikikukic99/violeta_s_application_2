@@ -10,6 +10,7 @@ dependencies:
     sdk: flutter
   flutter_svg: ^2.0.12
   cached_network_image: ^3.4.1
+  lottie: ^2.2.0  # or the latest version
   shared_preferences: ^2.3.3
   connectivity_plus: ^6.1.0
   flutter_riverpod: ^2.5.1
@@ -30,6 +31,7 @@ flutter:
   assets: 
     - assets/
     - assets/images/
+    - assets/anim/walktalk_running.json
   fonts: 
     - family: Poppins
       fonts: 

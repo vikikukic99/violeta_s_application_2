@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_export.dart';
-import '../../core/utils/image_constant.dart';
-import '../../core/utils/navigator_service.dart';
-import '../../routes/app_routes.dart';
-import '../../theme/text_style_helper.dart';
 import '../../widgets/custom_image_view.dart';
 
 class ChatListScreen extends StatelessWidget {
@@ -193,7 +189,7 @@ class _ChatListItem {
     required this.lastMessage,
     required this.time,
     this.unreadCount = 0,
-    this.imagePath,
+    this.imagePath, // Add this line
   });
 }
 
