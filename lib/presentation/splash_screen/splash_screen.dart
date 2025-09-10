@@ -3,6 +3,7 @@ import 'package:lottie/lottie.dart';
 
 import '../../core/app_export.dart';
 import './notifier/splash_notifier.dart';
+import '../../widgets/custom_image_view.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -12,10 +13,13 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class SplashScreenState extends ConsumerState<SplashScreen> {
+  // Set this to the EXACT path of your JSON in pubspec.yaml
+  static const String kLottiePath = 'assets/anim/walktalk_running.json';
+
   @override
   void initState() {
     super.initState();
-    // Show the splash for 5 seconds before navigating away
+    // Keep splash visible for 5 seconds, then navigate
     Future.delayed(const Duration(seconds: 5), () {
       ref.read(splashNotifier.notifier).navigateToNextScreen();
     });
@@ -40,7 +44,7 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // White circular badge containing the walking Lottie
+                  // --- Your requested snippet (with fallback) ---
                   ClipOval(
                     child: Container(
                       width: 96.h,
@@ -48,9 +52,18 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
                       color: Colors.white,
                       alignment: Alignment.center,
                       child: Lottie.asset(
-                        'assets/anim/walktalk_running.json',
+                        kLottiePath,
                         repeat: true,
                         fit: BoxFit.contain,
+                        errorBuilder: (context, err, stack) {
+                          // Fallback to static icon if the Lottie fails to load
+                          return CustomImageView(
+                            imagePath: ImageConstant.imgIGreen500,
+                            height: 40.h,
+                            width: 40.h,
+                            fit: BoxFit.contain,
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -60,12 +73,12 @@ class SplashScreenState extends ConsumerState<SplashScreen> {
                     style: TextStyleHelper.instance.headline30BoldPoppins.copyWith(),
                   ),
                   SizedBox(height: 2.h),
-                    Text(
-                      'Connect through movement',
-                      style: TextStyleHelper.instance.title16RegularPoppins.copyWith(
-                        color: const Color(0xFFFFFFFF).withAlpha((0.8 * 255).toInt()),
-                      ),
+                  Text(
+                    'Connect through movement',
+                    style: TextStyleHelper.instance.title16RegularPoppins.copyWith(
+                      color: const Color(0xFFFFFFFF).withAlpha((0.8 * 255).toInt()),
                     ),
+                  ),
                 ],
               ),
             );
