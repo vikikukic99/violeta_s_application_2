@@ -47,10 +47,17 @@ The application is configured for deployment on Replit with:
 - Target: Autoscale deployment for stateless web applications
 
 ## Recent Changes
+- **Fixed Navigation & Button Connections** (Latest):
+  - Resolved authentication redirect loop issue - users now stay in activity selection
+  - Connected all activity selection buttons to backend API
+  - Added proper form validation for Continue button (description & location required)
+  - Fixed splash screen auth check with mounted state management
+  - Complete flow working: Login → Activity Selection → Save to DB → Health Data Connection
 - **Added Replit Authentication**: Complete authentication system with user login/logout
   - Express.js backend server with PostgreSQL database
-  - Authentication endpoints at /api/login, /api/logout, /api/auth/user
+  - Authentication endpoints at /api/login, /api/logout, /api/auth/user, /api/auth/status
   - Session management with secure cookies
+  - Activity preferences API at /api/activity-preferences
 - **Fixed Registration Screen**: All buttons now functional with proper navigation
   - Create Account button uses clean arrow icon and redirects to login
   - Google and Apple buttons redirect to authentication 
