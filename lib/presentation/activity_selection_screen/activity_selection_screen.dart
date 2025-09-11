@@ -495,10 +495,116 @@ class ActivitySelectionScreenState
     );
   }
 
-  void onTapContinue(BuildContext context) {
+  void onTapContinue(BuildContext context) async {
     if (_formKey.currentState?.validate() ?? false) {
-      ref.read(activitySelectionNotifier.notifier).submitForm();
-      NavigatorService.pushNamed(AppRoutes.healthDataConnectionScreen);
+      try {
+        // Get the current state
+        final state = ref.read(activitySelectionNotifier);
+        final selectedActivities = state.activitiesList
+            ?.where((activity) => activity.isSelected ?? false)
+            .toList() ?? [];
+
+        if (selectedActivities.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select at least one activity'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+
+        // Prepare data to send to API
+        final requestData = {
+          'activities': selectedActivities.map((activity) => {
+            'title': activity.title,
+            'isSelected': activity.isSelected,
+          }).toList(),
+          'location': state.locationController?.text ?? '',
+          'preferredTime': state.timeController?.text ?? '',
+          'description': state.descriptionController?.text ?? '',
+        };
+
+        // Show loading indicator
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Text('Saving your preferences...'),
+                ],
+              ),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 30), // Long duration, will be dismissed when done
+            ),
+          );
+        }
+
+        // Save to database via API
+        final response = await html.HttpRequest.request(
+          '/api/activity-preferences',
+          method: 'POST',
+          requestHeaders: {
+            'Content-Type': 'application/json',
+          },
+          sendData: jsonEncode(requestData),
+          withCredentials: true,
+        );
+
+        // Hide loading indicator
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        }
+
+        if (response.status == 200) {
+          // Success - update local state and navigate
+          ref.read(activitySelectionNotifier.notifier).submitForm();
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Preferences saved successfully!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+            
+            // Navigate to health data connection screen
+            NavigatorService.pushNamed(AppRoutes.healthDataConnectionScreen);
+          }
+        } else {
+          // Handle error
+          throw Exception('Failed to save preferences: ${response.statusText}');
+        }
+      } catch (e) {
+        print('Error saving activity preferences: $e');
+        
+        // Hide loading indicator
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save preferences. Please try again.'),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: () => onTapContinue(context),
+              ),
+            ),
+          );
+        }
+      }
     }
   }
 }

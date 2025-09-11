@@ -1,4 +1,4 @@
-modules = ["web", "nodejs-20", "swift-5.8", "dart-3.8", "python-3.11"]
+modules = ["web", "nodejs-20", "swift-5.8", "dart-3.8", "python-3.11", "postgresql-16"]
 [agent]
 expertMode = true
 

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   index,
   jsonb,
   pgTable,
@@ -33,5 +34,20 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Activity preferences table
+export const activityPreferences = pgTable("activity_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  activityType: varchar("activity_type").notNull(), // "Walking", "Running", "Cycling", etc.
+  isSelected: boolean("is_selected").default(true),
+  preferredTime: varchar("preferred_time"), // e.g., "10:00"
+  description: varchar("description", { length: 500 }),
+  location: varchar("location"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type ActivityPreference = typeof activityPreferences.$inferSelect;
+export type UpsertActivityPreference = typeof activityPreferences.$inferInsert;
