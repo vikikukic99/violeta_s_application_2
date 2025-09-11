@@ -4,19 +4,15 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["flutter", "nodejs"]
+packages = ["flutter", "nodejs", "imagemagick_light"]
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 36119
+localPort = 40571
 externalPort = 3000
-
-[[ports]]
-localPort = 44161
-externalPort = 3001
 
 [workflows]
 runButton = "Project"
@@ -41,15 +37,31 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Flutter Web App"
+args = "Backend API"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Full Stack App"
 
 [[workflows.workflow]]
-name = "Flutter Web App"
+name = "Backend API"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 -m http.server 5000 -d build/web"
+args = "npm run dev"
+waitForPort = 3000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Full Stack App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
