@@ -1,286 +1,132 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:html' as html;
 
 import '../../../core/app_export.dart';
-import '../models/activity_model.dart';
-import '../models/activity_selection_model.dart';
 
-part 'activity_selection_state.dart';
+class ActivityItem {
+  final String id;
+  final String title;
+  final IconData icon;
+  final bool selected;
 
-final activitySelectionNotifier = StateNotifierProvider.autoDispose<
-    ActivitySelectionNotifier, ActivitySelectionState>(
-  (ref) => ActivitySelectionNotifier(
-    ActivitySelectionState(
-      activitySelectionModel: ActivitySelectionModel(),
-    ),
-  ),
-);
+  ActivityItem({
+    required this.id,
+    required this.title,
+    required this.icon,
+    this.selected = false,
+  });
 
-class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
-  ActivitySelectionNotifier(ActivitySelectionState state) : super(state) {
-    initialize();
-  }
+  ActivityItem copyWith({bool? selected}) =>
+      ActivityItem(id: id, title: title, icon: icon, selected: selected ?? this.selected);
+}
 
-  void initialize() {
-    final activities = [
-      ActivityModel(
-        id: '1',
-        title: 'Walking',
-        iconPath: ImageConstant.imgIGreen500,
-        isSelected: true,
-      ),
-      ActivityModel(
-        id: '2',
-        title: 'Dog Walking',
-        iconPath: ImageConstant.imgIGray600,
-        isSelected: false,
-      ),
-      ActivityModel(
-        id: '3',
-        title: 'Cycling',
-        iconPath: ImageConstant.imgIGray60048x48,
-        isSelected: false,
-      ),
-      ActivityModel(
-        id: '4',
-        title: 'Running',
-        iconPath: ImageConstant.imgIGreen50048x48,
-        isSelected: true,
-      ),
-    ];
+class ActivitySelectionState {
+  final List<ActivityItem>? activitiesList;
+  final TextEditingController? locationController;
+  final TextEditingController? timeController;
+  final TextEditingController? descriptionController;
+  final bool? isSearchingLocation;
+  final String? locationError;
+  final List<String>? citySearchResults;
 
-    state = state.copyWith(
-      activitiesList: activities,
-      timeController: TextEditingController(text: '10:00'),
-      descriptionController: TextEditingController(),
-      locationController: TextEditingController(),
-      citySearchResults: [],
-      isSearchingLocation: false,
+  ActivitySelectionState({
+    this.activitiesList,
+    this.locationController,
+    this.timeController,
+    this.descriptionController,
+    this.isSearchingLocation,
+    this.locationError,
+    this.citySearchResults,
+  });
+
+  ActivitySelectionState copyWith({
+    List<ActivityItem>? activitiesList,
+    TextEditingController? locationController,
+    TextEditingController? timeController,
+    TextEditingController? descriptionController,
+    bool? isSearchingLocation,
+    String? locationError,
+    List<String>? citySearchResults,
+  }) {
+    return ActivitySelectionState(
+      activitiesList: activitiesList ?? this.activitiesList,
+      locationController: locationController ?? this.locationController,
+      timeController: timeController ?? this.timeController,
+      descriptionController: descriptionController ?? this.descriptionController,
+      isSearchingLocation: isSearchingLocation ?? this.isSearchingLocation,
+      locationError: locationError,
+      citySearchResults: citySearchResults ?? this.citySearchResults,
     );
   }
+}
 
-  void toggleActivitySelection(ActivityModel activity) {
-    final updatedActivities = state.activitiesList?.map((item) {
-      if (item.id == activity.id) {
-        return item.copyWith(isSelected: !(item.isSelected ?? false));
-      }
-      return item;
-    }).toList();
-
-    state = state.copyWith(activitiesList: updatedActivities);
-  }
-
-  void setSelectedTime(TimeOfDay time) {
-    final timeString =
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-    state.timeController?.text = timeString;
-    state = state.copyWith(selectedTime: time);
-  }
-
-  void setStartNow() {
-    final now = TimeOfDay.now();
-    setSelectedTime(now);
-  }
-
-  // Location functionality
-  Future<void> searchCitiesByName(String query) async {
-    if (query.isEmpty) {
-      state = state.copyWith(citySearchResults: []);
-      return;
-    }
-
-    try {
-      state = state.copyWith(isSearchingLocation: true);
-      final locations = await locationFromAddress(query);
-
-      final List<String> cityResults = [];
-      for (final location in locations.take(5)) {
-        try {
-          final placemarks = await placemarkFromCoordinates(
-            location.latitude,
-            location.longitude,
-          );
-          if (placemarks.isNotEmpty) {
-            final placemark = placemarks.first;
-            final cityName =
-                '${placemark.locality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.country ?? ''}'
-                    .replaceAll(RegExp(r'^,|,$'), '')
-                    .replaceAll(', ,', ', ');
-            if (cityName.isNotEmpty && !cityResults.contains(cityName)) {
-              cityResults.add(cityName);
-            }
-          }
-        } catch (e) {
-          // Skip this location if reverse geocoding fails
-          continue;
-        }
-      }
-
-      state = state.copyWith(
-        citySearchResults: cityResults,
-        isSearchingLocation: false,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        citySearchResults: [],
-        isSearchingLocation: false,
-        locationError: 'Failed to search cities: ${e.toString()}',
-      );
-    }
-  }
-
-  Future<void> getCurrentLocation() async {
-    try {
-      state = state.copyWith(isSearchingLocation: true, locationError: null);
-
-      // For web, use browser's geolocation API
-      if (kIsWeb) {
-        // Use JavaScript interop to get browser location
-        final html.Geolocation? geo = html.window.navigator.geolocation;
-        
-        if (geo == null) {
-          state = state.copyWith(
+class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
+  ActivitySelectionNotifier()
+      : super(
+          ActivitySelectionState(
+            activitiesList: [
+              ActivityItem(id: 'walking', title: 'Walking', icon: Icons.emoji_people),
+              ActivityItem(id: 'dog_walking', title: 'Dog Walking', icon: Icons.pets),
+              ActivityItem(id: 'cycling', title: 'Cycling', icon: Icons.pedal_bike),
+              ActivityItem(id: 'running', title: 'Running', icon: Icons.directions_run),
+            ],
+            locationController: TextEditingController(),
+            timeController: TextEditingController(text: '10:00'),
+            descriptionController: TextEditingController(),
             isSearchingLocation: false,
-            locationError: 'Geolocation is not supported by your browser.',
-          );
-          return;
-        }
-
-        // Request current position
-        geo.getCurrentPosition().then((html.Geoposition position) async {
-          try {
-            final lat = (position.coords?.latitude ?? 0.0).toDouble();
-            final lon = (position.coords?.longitude ?? 0.0).toDouble();
-
-            // Get city name from coordinates using reverse geocoding
-            final placemarks = await placemarkFromCoordinates(lat, lon);
-
-            if (placemarks.isNotEmpty) {
-              final placemark = placemarks.first;
-              final cityName =
-                  '${placemark.locality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.country ?? ''}'
-                      .replaceAll(RegExp(r'^,|,$'), '')
-                      .replaceAll(', ,', ', ');
-
-              state.locationController?.text = cityName;
-              state = state.copyWith(
-                selectedCity: cityName,
-                currentPosition: Position(
-                  latitude: lat,
-                  longitude: lon,
-                  timestamp: DateTime.now(),
-                  accuracy: (position.coords?.accuracy ?? 0.0).toDouble(),
-                  altitude: (position.coords?.altitude ?? 0.0).toDouble(),
-                  altitudeAccuracy: (position.coords?.altitudeAccuracy ?? 0.0).toDouble(),
-                  heading: (position.coords?.heading ?? 0.0).toDouble(),
-                  headingAccuracy: 0.0,
-                  speed: (position.coords?.speed ?? 0.0).toDouble(),
-                  speedAccuracy: 0.0,
-                ),
-                isSearchingLocation: false,
-              );
-            } else {
-              state = state.copyWith(
-                isSearchingLocation: false,
-                locationError: 'Could not determine city from current location',
-              );
-            }
-          } catch (e) {
-            state = state.copyWith(
-              isSearchingLocation: false,
-              locationError: 'Failed to get city name: ${e.toString()}',
-            );
-          }
-        }).catchError((error) {
-          String errorMessage = 'Location access denied';
-          if (error is html.PositionError) {
-            switch (error.code) {
-              case 1:
-                errorMessage = 'Location access denied. Please enable location permissions.';
-                break;
-              case 2:
-                errorMessage = 'Position unavailable. Please try again.';
-                break;
-              case 3:
-                errorMessage = 'Location request timed out. Please try again.';
-                break;
-            }
-          }
-          state = state.copyWith(
-            isSearchingLocation: false,
-            locationError: errorMessage,
-          );
-        });
-      } else {
-        // Fallback for non-web platforms (mobile/desktop)
-        // Check location permissions
-        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-        if (!serviceEnabled) {
-          state = state.copyWith(
-            isSearchingLocation: false,
-            locationError: 'Location services are disabled.',
-          );
-          return;
-        }
-
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied) {
-            state = state.copyWith(
-              isSearchingLocation: false,
-              locationError: 'Location permissions are denied',
-            );
-            return;
-          }
-        }
-
-        if (permission == LocationPermission.deniedForever) {
-          state = state.copyWith(
-            isSearchingLocation: false,
-            locationError:
-                'Location permissions are permanently denied, please enable them in settings.',
-          );
-          return;
-        }
-
-        // Get current position
-        final Position position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 30),
+            locationError: null,
+            citySearchResults: const [],
           ),
         );
 
-        // Get city name from coordinates
-        final placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
+  /* ------------------------ Activities ------------------------ */
 
-        if (placemarks.isNotEmpty) {
-          final placemark = placemarks.first;
-          final cityName =
-              '${placemark.locality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.country ?? ''}'
-                  .replaceAll(RegExp(r'^,|,$'), '')
-                  .replaceAll(', ,', ', ');
+  void toggleActivitySelection(ActivityItem item) {
+    final list = [...(state.activitiesList ?? [])];
+    final idx = list.indexWhere((e) => e.id == item.id);
+    if (idx != -1) {
+      list[idx] = list[idx].copyWith(selected: !list[idx].selected);
+      state = state.copyWith(activitiesList: list);
+    }
+  }
 
-          state.locationController?.text = cityName;
-          state = state.copyWith(
-            selectedCity: cityName,
-            currentPosition: position,
-            isSearchingLocation: false,
-          );
-        } else {
-          state = state.copyWith(
-            isSearchingLocation: false,
-            locationError: 'Could not determine city from current location',
-          );
-        }
+  /* ------------------------ Location ------------------------ */
+
+  Future<void> getCurrentLocation() async {
+    try {
+      state = state.copyWith(
+        isSearchingLocation: true,
+        locationError: null,
+        citySearchResults: const [],
+      );
+
+      final permission = await Geolocator.checkPermission();
+      LocationPermission perm = permission;
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        perm = await Geolocator.requestPermission();
       }
+
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        state = state.copyWith(
+          isSearchingLocation: false,
+          locationError: 'Failed to get current location: User has not allowed access to system location.',
+        );
+        return;
+      }
+
+      final Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+
+      // NOTE: Reverse geocoding left as an exercise depending on your chosen service.
+      // For now, just display lat/lng for verification.
+      state.locationController?.text =
+          'Lat: ${pos.latitude.toStringAsFixed(4)}, Lng: ${pos.longitude.toStringAsFixed(4)}';
+
+      state = state.copyWith(isSearchingLocation: false, locationError: null);
     } catch (e) {
       state = state.copyWith(
         isSearchingLocation: false,
@@ -289,48 +135,5 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
     }
   }
 
-  void selectCity(String cityName) {
-    state.locationController?.text = cityName;
-    state = state.copyWith(
-      selectedCity: cityName,
-      citySearchResults: [],
-    );
-  }
-
   void clearLocationError() {
-    state = state.copyWith(locationError: null);
-  }
-
-  String? validateDescription(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please tell us more about yourself';
-    }
-    if (value.trim().length < 10) {
-      return 'Please provide at least 10 characters';
-    }
-    return null;
-  }
-
-  void submitForm() {
-    final selectedActivities = state.activitiesList
-        ?.where((activity) => activity.isSelected ?? false)
-        .toList();
-
-    state = state.copyWith(
-      isFormSubmitted: true,
-      selectedActivitiesCount: selectedActivities?.length ?? 0,
-    );
-
-    // Clear form after successful submission
-    state.descriptionController?.clear();
-    state.timeController?.text = '10:00';
-  }
-
-  @override
-  void dispose() {
-    state.timeController?.dispose();
-    state.descriptionController?.dispose();
-    state.locationController?.dispose();
-    super.dispose();
-  }
-}
+    state = state.copyWith(locationError:

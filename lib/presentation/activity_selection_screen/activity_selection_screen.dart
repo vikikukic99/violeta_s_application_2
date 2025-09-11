@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
-import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_edit_text.dart';
 import '../../widgets/custom_search_view.dart';
-import './widgets/activity_card_widget.dart';
-import './widgets/ai_enhanced_text_field.dart';
+
+import 'widgets/activity_card_widget.dart';
+import 'widgets/ai_enhanced_text_field.dart';
 import 'notifier/activity_selection_notifier.dart';
 
 class ActivitySelectionScreen extends ConsumerStatefulWidget {
@@ -21,85 +21,10 @@ class ActivitySelectionScreenState
     extends ConsumerState<ActivitySelectionScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // Local fallback suggestions (used by the AI Assistant popup).
-  // If you later expose suggestions from your notifier, you can replace this.
-  static const List<String> _aiSuggestions = [
-    'I love exploring new walking routes and discovering hidden gems in the city.',
-    'Looking for motivated fitness companions who enjoy morning walks and healthy conversations.',
-    'Passionate about wellness and building meaningful connections through shared activities.',
-    'I’m training for a 5K and would love accountability buddies for weekend runs.',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    // Check for registration data after authentication
-    _handleRegistrationData();
-    
-    // Automatically request location permission after a slight delay
-    // This ensures the screen is fully loaded and ready
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        print('[ActivitySelection] Auto-requesting location on page load...');
-        // Automatically get user's current location on page load
-        ref.read(activitySelectionNotifier.notifier).getCurrentLocation();
-      }
-    });
-  }
-
-  Future<void> _handleRegistrationData() async {
-    try {
-      final registrationDataJson = html.window.sessionStorage['registration_data'];
-      if (registrationDataJson != null) {
-        final registrationData = jsonDecode(registrationDataJson);
-        
-        // Send registration data to backend
-        await _updateUserProfile(registrationData);
-        
-        // Clear the registration data from storage
-        html.window.sessionStorage.remove('registration_data');
-      }
-    } catch (e) {
-      print('Error handling registration data: $e');
-    }
-  }
-
-  Future<void> _updateUserProfile(Map<String, dynamic> userData) async {
-    try {
-      final response = await html.HttpRequest.request(
-        '/api/update-profile',
-        method: 'POST',
-        requestHeaders: {
-          'Content-Type': 'application/json',
-        },
-        sendData: jsonEncode({
-          'fullName': userData['fullName'],
-          'nickname': userData['nickname'],
-        }),
-        withCredentials: true,
-      );
-
-      if (response.status == 200) {
-        print('User profile updated successfully');
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile updated successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        print('Failed to update user profile: ${response.statusText}');
-      }
-    } catch (e) {
-      print('Error updating user profile: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(activitySelectionNotifier);
+
     return SafeArea(
       child: Scaffold(
         backgroundColor: appTheme.gray_50,
@@ -110,6 +35,7 @@ class ActivitySelectionScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Title
                 Text(
                   'What activities interest you today?',
                   style: TextStyleHelper.instance.headline24BoldInter,
@@ -121,56 +47,65 @@ class ActivitySelectionScreenState
                   style: TextStyleHelper.instance.body14RegularInter
                       .copyWith(color: appTheme.gray_600),
                 ),
-                SizedBox(height: 24.h),
 
-                /// Activities grid (Walking, Dog Walking, Cycling, Running…)
+                // Activities grid
+                SizedBox(height: 24.h),
                 _buildActivitiesGrid(),
 
+                // Location
                 SizedBox(height: 24.h),
                 Text(
                   'Location',
                   style: TextStyleHelper.instance.body14MediumPoppins,
                 ),
                 SizedBox(height: 8.h),
-
-                /// Location input with “use my location” button + error + results
                 _buildLocationField(),
 
+                // Start time
                 SizedBox(height: 24.h),
                 Text(
                   'Start time',
                   style: TextStyleHelper.instance.body14MediumPoppins,
                 ),
                 SizedBox(height: 12.h),
-
-                /// Time field + “Start now”
                 _buildTimeSelectionRow(),
 
+                // About you
                 SizedBox(height: 24.h),
                 Text(
                   'Tell us more about you.',
                   style: TextStyleHelper.instance.headline24BoldInter,
                 ),
-                SizedBox(height: 16.h),
+                SizedBox(height: 12.h),
 
-                /// Description with AI-enhanced text field
-                _buildAIEnhancedDescriptionField(),
+                // AI enhanced description field
+                // NOTE: Only ONE AI entry point lives inside this widget (no duplicate button below).
+                AIEnhancedTextField(
+                  controller: state.descriptionController!,
+                  hintText:
+                      'Share your interests, goals, or what makes you a great walking companion...',
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
+                  onChanged: (v) {},
+                  validator: (value) => ref
+                      .read(activitySelectionNotifier.notifier)
+                      .validateDescription(value),
+                ),
 
                 SizedBox(height: 40.h),
 
-                /// Continue — uses frameless Material icon (no white box)
+                // Continue CTA (frameless right icon is handled in CustomButton via rightIconWidget)
                 CustomButton(
                   text: 'Continue',
                   backgroundColor: appTheme.green_500,
                   textColor: appTheme.white_A700,
-                  rightIconWidget: Icon(
+                  rightIconWidget: const Icon(
                     Icons.arrow_forward_rounded,
-                    size: 18.h,
-                    color: appTheme.white_A700,
+                    size: 22,
+                    color: Colors.white,
                   ),
-                  elevation: 6,
-                  width: double.infinity,
                   onPressed: () => onTapContinue(context),
+                  width: double.infinity,
                 ),
               ],
             ),
@@ -242,8 +177,8 @@ class ActivitySelectionScreenState
                     child: state.isSearchingLocation == true
                         ? Center(
                             child: SizedBox(
-                              height: 20.h,
-                              width: 20.h,
+                              height: 18.h,
+                              width: 18.h,
                               child: CircularProgressIndicator(
                                 color: appTheme.white_A700,
                                 strokeWidth: 2,
@@ -260,7 +195,7 @@ class ActivitySelectionScreenState
               ],
             ),
 
-            /// Error bubble
+            // Error chip
             if (state.locationError != null) ...[
               SizedBox(height: 8.h),
               Container(
@@ -283,7 +218,7 @@ class ActivitySelectionScreenState
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => notifier.clearLocationError(),
+                      onTap: notifier.clearLocationError,
                       child: Icon(Icons.close,
                           color: appTheme.colorFFEF44, size: 16.h),
                     ),
@@ -292,7 +227,7 @@ class ActivitySelectionScreenState
               ),
             ],
 
-            /// Autocomplete list
+            // City suggestions dropdown
             if (state.citySearchResults?.isNotEmpty == true) ...[
               SizedBox(height: 8.h),
               Container(
@@ -360,9 +295,8 @@ class ActivitySelectionScreenState
                 text: 'Start now',
                 backgroundColor: appTheme.green_500,
                 textColor: appTheme.white_A700,
-                onPressed: () {
-                  ref.read(activitySelectionNotifier.notifier).setStartNow();
-                },
+                onPressed: () =>
+                    ref.read(activitySelectionNotifier.notifier).setStartNow(),
               ),
             ),
           ],
@@ -371,43 +305,7 @@ class ActivitySelectionScreenState
     );
   }
 
-  Widget _buildAIEnhancedDescriptionField() {
-    return Consumer(
-      builder: (context, ref, _) {
-        final state = ref.watch(activitySelectionNotifier);
-        
-        // Prepare context for AI suggestions
-        final selectedActivities = state.activitiesList
-            ?.where((activity) => activity.isSelected == true)
-            .map((activity) => {'title': activity.title})
-            .toList() ?? [];
-        
-        final location = state.locationController?.text ?? '';
-        final preferredTime = state.timeController?.text ?? '';
-        
-        return AIEnhancedTextField(
-          controller: state.descriptionController!,
-          hintText:
-              'Share your interests, goals, or what makes you a great walking companion...',
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
-          onChanged: (value) {
-            // Optional: react to edits if needed
-          },
-          validator: (value) => ref
-              .read(activitySelectionNotifier.notifier)
-              .validateDescription(value),
-          // Pass context to AI field for personalized suggestions
-          activities: selectedActivities,
-          locationContext: location,
-          preferredTimeContext: preferredTime,
-        );
-      },
-    );
-  }
-
-
-  void _showTimePicker(BuildContext context) async {
+  Future<void> _showTimePicker(BuildContext context) async {
     final TimeOfDay? picked =
         await showTimePicker(context: context, initialTime: TimeOfDay.now());
     if (picked != null) {
@@ -415,209 +313,10 @@ class ActivitySelectionScreenState
     }
   }
 
-  /// Bottom sheet with quick suggestions. Tapping a suggestion inserts it into
-  /// the description text field and closes the sheet.
-  void _showAiSuggestionsSheet() {
-    final controller =
-        ref.read(activitySelectionNotifier).descriptionController!;
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: appTheme.white_A700,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.h)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16.h, 12.h, 16.h, 16.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40.h,
-                    height: 4.h,
-                    decoration: BoxDecoration(
-                      color: appTheme.blue_gray_100,
-                      borderRadius: BorderRadius.circular(2.h),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                Text(
-                  'AI Suggestions',
-                  style: TextStyleHelper.instance.title16SemiBoldPoppins
-                      .copyWith(color: appTheme.blue_gray_900),
-                ),
-                SizedBox(height: 8.h),
-                ..._aiSuggestions.map(
-                  (s) => Padding(
-                    padding: EdgeInsets.only(top: 8.h),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12.h),
-                      onTap: () {
-                        controller.text = s;
-                        controller.selection = TextSelection.collapsed(
-                          offset: controller.text.length,
-                        );
-                        Navigator.of(context).pop();
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(12.h),
-                        decoration: BoxDecoration(
-                          color: appTheme.green_100,
-                          borderRadius: BorderRadius.circular(12.h),
-                        ),
-                        child: Text(
-                          s,
-                          style: TextStyleHelper.instance.body14RegularInter
-                              .copyWith(color: appTheme.blue_gray_800),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void onTapContinue(BuildContext context) async {
-    // Validate description field first
-    final state = ref.read(activitySelectionNotifier);
-    if (state.descriptionController?.text.trim().isEmpty ?? true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please tell us more about yourself'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-    
+  void onTapContinue(BuildContext context) {
     if (_formKey.currentState?.validate() ?? false) {
-      try {
-        final selectedActivities = state.activitiesList
-            ?.where((activity) => activity.isSelected ?? false)
-            .toList() ?? [];
-
-        if (selectedActivities.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please select at least one activity'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-          return;
-        }
-        
-        // Validate location
-        if (state.locationController?.text.trim().isEmpty ?? true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please enter your location'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-          return;
-        }
-
-        // Prepare data to send to API
-        final requestData = {
-          'activities': selectedActivities.map((activity) => {
-            'title': activity.title,
-            'isSelected': activity.isSelected,
-          }).toList(),
-          'location': state.locationController?.text ?? '',
-          'preferredTime': state.timeController?.text ?? '',
-          'description': state.descriptionController?.text ?? '',
-        };
-
-        // Show loading indicator
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Row(
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Text('Saving your preferences...'),
-                ],
-              ),
-              backgroundColor: Colors.blue,
-              duration: Duration(seconds: 30), // Long duration, will be dismissed when done
-            ),
-          );
-        }
-
-        // Save to database via API
-        final response = await html.HttpRequest.request(
-          '/api/activity-preferences',
-          method: 'POST',
-          requestHeaders: {
-            'Content-Type': 'application/json',
-          },
-          sendData: jsonEncode(requestData),
-          withCredentials: true,
-        );
-
-        // Hide loading indicator
-        if (mounted) {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        }
-
-        if (response.status == 200) {
-          // Success - update local state and navigate
-          ref.read(activitySelectionNotifier.notifier).submitForm();
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Preferences saved successfully!'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 2),
-              ),
-            );
-            
-            // Navigate to health data connection screen
-            NavigatorService.pushNamed(AppRoutes.healthDataConnectionScreen);
-          }
-        } else {
-          // Handle error
-          throw Exception('Failed to save preferences: ${response.statusText}');
-        }
-      } catch (e) {
-        print('Error saving activity preferences: $e');
-        
-        // Hide loading indicator
-        if (mounted) {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to save preferences. Please try again.'),
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: 'Retry',
-                textColor: Colors.white,
-                onPressed: () => onTapContinue(context),
-              ),
-            ),
-          );
-        }
-      }
+      ref.read(activitySelectionNotifier.notifier).submitForm();
+      NavigatorService.pushNamed(AppRoutes.healthDataConnectionScreen);
     }
   }
 }
