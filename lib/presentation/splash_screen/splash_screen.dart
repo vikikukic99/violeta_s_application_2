@@ -1,6 +1,8 @@
 import 'dart:math' as Math;
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'dart:html' as html;
+import 'dart:convert';
 
 import '../../core/app_export.dart';
 import './notifier/splash_notifier.dart';
@@ -60,7 +62,7 @@ class SplashScreenState extends ConsumerState<SplashScreen>
     
     // Keep splash visible for 6 seconds to show animations, then navigate
     Future.delayed(const Duration(seconds: 6), () {
-      ref.read(splashNotifier.notifier).navigateToNextScreen();
+      _checkAuthAndNavigate();
     });
   }
 
@@ -80,9 +82,7 @@ class SplashScreenState extends ConsumerState<SplashScreen>
           builder: (context, ref, _) {
             ref.listen<SplashState>(splashNotifier, (prev, curr) {
               if (curr.shouldNavigate) {
-                NavigatorService.pushNamedAndRemoveUntil(
-                  AppRoutes.onboardingScreen,
-                );
+                // Navigation will be handled by _checkAuthAndNavigate
               }
             });
 
@@ -187,5 +187,33 @@ class SplashScreenState extends ConsumerState<SplashScreen>
         ),
       ),
     );
+  }
+
+  void _checkAuthAndNavigate() async {
+    try {
+      // Check if user is authenticated by calling the backend
+      final response = await html.HttpRequest.request(
+        '/api/auth/user',
+        method: 'GET',
+        withCredentials: true,
+      );
+      
+      if (response.status == 200) {
+        // User is authenticated, redirect to activity selection
+        NavigatorService.pushNamedAndRemoveUntil(
+          AppRoutes.activitySelectionScreen,
+        );
+      } else {
+        // User not authenticated, go to onboarding
+        NavigatorService.pushNamedAndRemoveUntil(
+          AppRoutes.onboardingScreen,
+        );
+      }
+    } catch (e) {
+      // Error checking auth, go to onboarding
+      NavigatorService.pushNamedAndRemoveUntil(
+        AppRoutes.onboardingScreen,
+      );
+    }
   }
 }
