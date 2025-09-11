@@ -10,10 +10,6 @@ packages = ["flutter", "nodejs"]
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 37117
-externalPort = 3000
-
 [workflows]
 runButton = "Project"
 
@@ -45,7 +41,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flutter run -d web-server --web-port=5000 --web-hostname=0.0.0.0"
+args = "python3 -m http.server 5000 -d build/web"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
