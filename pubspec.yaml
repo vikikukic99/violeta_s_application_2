@@ -32,6 +32,7 @@ flutter:
     - assets/
     - assets/images/
     - assets/anim/walktalk_running.json
+    - env.json
   fonts: 
     - family: Poppins
       fonts: 

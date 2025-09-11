@@ -22,6 +22,10 @@ author = "agent"
 task = "workflow.run"
 args = "Flutter Web Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Flutter Web Build"
+
 [[workflows.workflow]]
 name = "Flutter Web Server"
 author = "agent"
@@ -34,7 +38,18 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
+[[workflows.workflow]]
+name = "Flutter Web Build"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter build web --release"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
 [deployment]
 deploymentTarget = "autoscale"
-run = ["flutter", "run", "-d", "web-server", "--web-port=5000", "--web-hostname=0.0.0.0", "--release"]
-build = ["flutter", "build", "web"]
+run = ["python3", "-m", "http.server", "5000", "-d", "build/web"]
+build = ["flutter", "build", "web", "--release"]
