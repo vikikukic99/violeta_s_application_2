@@ -110,51 +110,70 @@ class SplashScreenState extends ConsumerState<SplashScreen>
                         ),
                       ],
                     ),
-                    // Circular walking animated icon
+                    // Multiple animated activity icons
                     AnimatedBuilder(
                       animation: _circleAnimation,
                       builder: (context, child) {
                         return AnimatedBuilder(
                           animation: _bounceAnimation,
                           builder: (context, child) {
-                            // Calculate circular position around the center
-                            double radius = 120.h; // Distance from center
-                            double x = radius * Math.cos(_circleAnimation.value);
-                            double y = radius * Math.sin(_circleAnimation.value);
+                            double radius = 120.h;
                             
-                            return Transform.translate(
-                              offset: Offset(x, y + _bounceAnimation.value),
-                              child: Container(
-                                width: 60.h,
-                                height: 60.h,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.white.withOpacity(0.4),
-                                      blurRadius: 15,
-                                      spreadRadius: 3,
+                            // Define activities with their icons and offsets
+                            List<Map<String, dynamic>> activities = [
+                              {
+                                'icon': Icons.directions_run,
+                                'offset': 0.0, // Running person
+                                'color': Colors.orange,
+                              },
+                              {
+                                'icon': Icons.directions_walk,
+                                'offset': Math.pi / 2, // Walking person (90° ahead)
+                                'color': Colors.blue,
+                              },
+                              {
+                                'icon': Icons.directions_bike,
+                                'offset': Math.pi, // Biking person (180° ahead)
+                                'color': Colors.green,
+                              },
+                              {
+                                'icon': Icons.pets,
+                                'offset': 3 * Math.pi / 2, // Walking dog (270° ahead)
+                                'color': Colors.purple,
+                              },
+                            ];
+                            
+                            return Stack(
+                              children: activities.map((activity) {
+                                double activityAngle = _circleAnimation.value + activity['offset'];
+                                double x = radius * Math.cos(activityAngle);
+                                double y = radius * Math.sin(activityAngle);
+                                
+                                return Transform.translate(
+                                  offset: Offset(x, y + _bounceAnimation.value),
+                                  child: Container(
+                                    width: 55.h,
+                                    height: 55.h,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: activity['color'].withOpacity(0.3),
+                                          blurRadius: 12,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                alignment: Alignment.center,
-                                child: Lottie.asset(
-                                  'assets/anim/walktalk_running.json',
-                                  repeat: true,
-                                  fit: BoxFit.contain,
-                                  width: 40.h,
-                                  height: 40.h,
-                                  errorBuilder: (context, err, stack) {
-                                    // Walking person icon fallback
-                                    return Icon(
-                                      Icons.directions_walk,
-                                      color: appTheme.green_500,
-                                      size: 30.h,
-                                    );
-                                  },
-                                ),
-                              ),
+                                    alignment: Alignment.center,
+                                    child: Icon(
+                                      activity['icon'],
+                                      color: activity['color'],
+                                      size: 28.h,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                             );
                           },
                         );
