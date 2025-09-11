@@ -275,4 +275,18 @@ class TextStyleHelper {
         fontFamily: 'Poppins',
         color: appTheme.blue_gray_900,
       );
+
+  TextStyle get title14SemiBoldPoppins => TextStyle(
+        fontSize: 14.fSize,
+        fontWeight: FontWeight.w600,
+        fontFamily: 'Poppins',
+        color: appTheme.blue_gray_900,
+      );
+
+  TextStyle get body10RegularInter => TextStyle(
+        fontSize: 10.fSize,
+        fontWeight: FontWeight.w400,
+        fontFamily: 'Inter',
+        color: appTheme.gray_600,
+      );
 }

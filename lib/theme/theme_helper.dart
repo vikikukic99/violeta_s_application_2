@@ -68,6 +68,7 @@ class LightCodeColors {
   Color get blue_gray_100_01 => const Color(0xFFCED4DA);
   Color get blue_gray_100_02 => const Color(0xFFCBCBCB);
   Color get blue_gray_100_99 => const Color(0x99D9D9D9);
+  Color get blue_gray_50  => const Color(0xFFF8FAFC);
 
   // ----- Basic colors -----
   Color get white_A700 => const Color(0xFFFFFFFF);
@@ -94,12 +95,14 @@ class LightCodeColors {
   Color get blue_300      => const Color(0xFF60A5FA);
   Color get blue_50       => const Color(0xFFEEF2FF);
   Color get blue_50_01    => const Color(0xFFDBEAFE);
+  Color get blue_500      => const Color(0xFF3B82F6);
   Color get blue_A200     => const Color(0xFF3B82F6);
   Color get blue_A200_01  => const Color(0xFF4285F4);
   Color get blue_A700     => const Color(0xFF2563EB);
   Color get light_blue_800 => const Color(0xFF0070BA);
   Color get teal_A700     => const Color(0xFF14B8A6);
   Color get teal_400      => const Color(0xFF10B981);
+  Color get teal_50       => const Color(0xFFE6FFFA);
 
   // ----- Ambers / Yellows -----
   Color get amber_300_33 => const Color(0x33FFD54F);

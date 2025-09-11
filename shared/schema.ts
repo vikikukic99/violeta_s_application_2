@@ -8,6 +8,7 @@ import {
   pgTable,
   timestamp,
   varchar,
+  unique,
 } from "drizzle-orm/pg-core";
 
 // Session storage table.
@@ -52,7 +53,7 @@ export const activityPreferences = pgTable("activity_preferences", {
 // Health profiles table - stores user health goals and settings
 export const healthProfiles = pgTable("health_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
   age: integer("age"),
   height: numeric("height", { precision: 5, scale: 2 }), // in cm
   weight: numeric("weight", { precision: 5, scale: 2 }), // in kg
@@ -67,39 +68,51 @@ export const healthProfiles = pgTable("health_profiles", {
 });
 
 // Daily activities table - stores daily health metrics and activities
-export const dailyActivities = pgTable("daily_activities", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  date: timestamp("date").notNull(), // Date for the activity data
-  steps: integer("steps").default(0),
-  caloriesBurned: integer("calories_burned").default(0),
-  distanceKm: numeric("distance_km", { precision: 8, scale: 3 }).default('0'), // in kilometers
-  activeMinutes: integer("active_minutes").default(0),
-  heartRateAvg: integer("heart_rate_avg"),
-  heartRateMax: integer("heart_rate_max"),
-  sleepHours: numeric("sleep_hours", { precision: 4, scale: 2 }),
-  waterIntakeLiters: numeric("water_intake_liters", { precision: 4, scale: 2 }).default('0'),
-  weight: numeric("weight", { precision: 5, scale: 2 }), // Daily weight tracking
-  notes: varchar("notes", { length: 500 }),
-  dataSource: varchar("data_source", { length: 100 }), // "manual", "google_fit", "apple_health", etc.
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const dailyActivities = pgTable(
+  "daily_activities", 
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    date: timestamp("date").notNull(), // Date for the activity data
+    steps: integer("steps").default(0),
+    caloriesBurned: integer("calories_burned").default(0),
+    distanceKm: numeric("distance_km", { precision: 8, scale: 3 }).default('0'), // in kilometers
+    activeMinutes: integer("active_minutes").default(0),
+    heartRateAvg: integer("heart_rate_avg"),
+    heartRateMax: integer("heart_rate_max"),
+    sleepHours: numeric("sleep_hours", { precision: 4, scale: 2 }),
+    waterIntakeLiters: numeric("water_intake_liters", { precision: 4, scale: 2 }).default('0'),
+    weight: numeric("weight", { precision: 5, scale: 2 }), // Daily weight tracking
+    notes: varchar("notes", { length: 500 }),
+    dataSource: varchar("data_source", { length: 100 }), // "manual", "google_fit", "apple_health", etc.
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    userDateUnique: unique("daily_activities_user_date_unique").on(table.userId, table.date),
+  })
+);
 
 // Health integrations table - stores connected health service credentials and settings
-export const healthIntegrations = pgTable("health_integrations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  serviceName: varchar("service_name").notNull(), // "google_fit", "apple_health", "fitbit", etc.
-  isActive: boolean("is_active").default(true),
-  accessToken: varchar("access_token", { length: 1000 }), // Encrypted access token
-  refreshToken: varchar("refresh_token", { length: 1000 }), // Encrypted refresh token
-  tokenExpiresAt: timestamp("token_expires_at"),
-  settings: jsonb("settings"), // Service-specific settings
-  lastSyncAt: timestamp("last_sync_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const healthIntegrations = pgTable(
+  "health_integrations", 
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    serviceName: varchar("service_name").notNull(), // "google_fit", "apple_health", "fitbit", etc.
+    isActive: boolean("is_active").default(true),
+    accessToken: varchar("access_token", { length: 1000 }), // Encrypted access token
+    refreshToken: varchar("refresh_token", { length: 1000 }), // Encrypted refresh token
+    tokenExpiresAt: timestamp("token_expires_at"),
+    settings: jsonb("settings"), // Service-specific settings
+    lastSyncAt: timestamp("last_sync_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    userServiceUnique: unique("health_integrations_user_service_unique").on(table.userId, table.serviceName),
+  })
+);
 
 // Health sessions table - stores individual workout/activity sessions
 export const healthSessions = pgTable("health_sessions", {

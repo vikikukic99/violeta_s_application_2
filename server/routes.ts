@@ -535,6 +535,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual health data sync endpoint
+  app.post('/api/sync-manual-data', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { syncData } = req.body;
+
+      if (!syncData || !Array.isArray(syncData)) {
+        return res.status(400).json({ message: "Sync data array is required" });
+      }
+
+      const results = [];
+      
+      for (const data of syncData) {
+        const { type, ...dataFields } = data;
+        
+        try {
+          if (type === 'daily_activity') {
+            const activity = await storage.saveDailyActivity({
+              userId: user.id,
+              ...dataFields,
+              dataSource: 'manual'
+            });
+            results.push({ type, status: 'success', data: activity });
+          } else if (type === 'health_session') {
+            const session = await storage.saveHealthSession({
+              userId: user.id,
+              ...dataFields,
+              dataSource: 'manual'
+            });
+            results.push({ type, status: 'success', data: session });
+          } else {
+            results.push({ type, status: 'error', message: 'Invalid data type' });
+          }
+        } catch (error) {
+          results.push({ type, status: 'error', message: error.message });
+        }
+      }
+
+      res.json({
+        message: "Manual sync completed",
+        results
+      });
+    } catch (error) {
+      console.error("Error syncing manual data:", error);
+      res.status(500).json({ message: "Failed to sync manual data" });
+    }
+  });
+
+  // Health stats summary endpoint
+  app.get('/api/health-stats/summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const user = req.user;
+      const { period = '30' } = req.query;
+      
+      const days = parseInt(period as string);
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+
+      const [profile, activities, sessions] = await Promise.all([
+        storage.getHealthProfile(user.id),
+        storage.getDailyActivitiesRange(user.id, startDate, endDate),
+        storage.getHealthSessionsRange(user.id, startDate, endDate)
+      ]);
+
+      // Calculate summary statistics
+      const totalSteps = activities.reduce((sum, activity) => sum + (activity.steps || 0), 0);
+      const totalCalories = activities.reduce((sum, activity) => sum + (activity.caloriesBurned || 0), 0);
+      const totalDistance = activities.reduce((sum, activity) => sum + parseFloat(activity.distanceKm || '0'), 0);
+      const averageSleep = activities.length > 0 
+        ? activities.reduce((sum, activity) => sum + parseFloat(activity.sleepHours || '0'), 0) / activities.length 
+        : 0;
+
+      const workoutCount = sessions.length;
+      const averageWorkoutDuration = sessions.length > 0
+        ? sessions.reduce((sum, session) => sum + (session.durationMinutes || 0), 0) / sessions.length
+        : 0;
+
+      res.json({
+        period: `${days} days`,
+        summary: {
+          totalSteps,
+          averageStepsPerDay: Math.round(totalSteps / days),
+          totalCalories,
+          averageCaloriesPerDay: Math.round(totalCalories / days),
+          totalDistanceKm: Math.round(totalDistance * 100) / 100,
+          averageDistancePerDay: Math.round((totalDistance / days) * 100) / 100,
+          averageSleepHours: Math.round(averageSleep * 100) / 100,
+          workoutCount,
+          averageWorkoutDuration: Math.round(averageWorkoutDuration),
+          goalsProgress: profile ? {
+            stepsGoal: profile.dailyStepsGoal,
+            stepsProgress: Math.min(100, Math.round((totalSteps / days / profile.dailyStepsGoal) * 100)),
+            caloriesGoal: profile.dailyCaloriesGoal,
+            caloriesProgress: profile.dailyCaloriesGoal ? Math.min(100, Math.round((totalCalories / days / profile.dailyCaloriesGoal) * 100)) : null,
+            workoutsGoal: profile.weeklyWorkoutsGoal,
+            workoutsProgress: Math.min(100, Math.round((workoutCount / (days / 7) / profile.weeklyWorkoutsGoal) * 100))
+          } : null
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching health stats summary:", error);
+      res.status(500).json({ message: "Failed to fetch health stats summary" });
+    }
+  });
+
   // Serve Flutter app static files
   app.use(express.static("build/web"));
   

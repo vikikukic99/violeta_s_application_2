@@ -23,8 +23,8 @@ class HealthDataConnectionNotifier
 
   // Get the backend base URL based on environment
   String get baseUrl {
-    const backendUrl = String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:5000');
-    return backendUrl;
+    // Use relative URLs for same-origin requests to work in all environments
+    return '';
   }
 
   void initialize() async {
@@ -50,8 +50,12 @@ class HealthDataConnectionNotifier
         Uri.parse('$baseUrl/api/health-integrations'),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       );
+      
+      print('Health integrations response status: ${response.statusCode}');
+      print('Health integrations response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final List<dynamic> integrations = json.decode(response.body);
@@ -91,8 +95,12 @@ class HealthDataConnectionNotifier
         Uri.parse('$baseUrl/api/auth/google-fit/status'),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       );
+
+      print('Google Fit status response: ${statusResponse.statusCode}');
+      print('Google Fit status body: ${statusResponse.body}');
 
       if (statusResponse.statusCode == 200) {
         final statusData = json.decode(statusResponse.body);
@@ -105,21 +113,63 @@ class HealthDataConnectionNotifier
           );
           return;
         }
+      } else if (statusResponse.statusCode == 401) {
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: false,
+          errorMessage: 'Please log in first to connect Google Fit.',
+        );
+        return;
+      } else if (statusResponse.statusCode == 503) {
+        final errorData = json.decode(statusResponse.body);
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: false,
+          errorMessage: errorData['message'] ?? 'Google Fit integration is not configured.',
+        );
+        return;
       }
 
-      // If not connected, redirect to Google Fit OAuth
+      // Check if user is authenticated before attempting connection
+      final authResponse = await http.get(
+        Uri.parse('$baseUrl/api/auth/status'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+      
+      print('Auth status response: ${authResponse.statusCode}');
+      print('Auth status body: ${authResponse.body}');
+      
+      if (authResponse.statusCode != 200) {
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: false,
+          errorMessage: 'Authentication required. Please log in first.',
+        );
+        return;
+      }
+      
+      final authData = json.decode(authResponse.body);
+      if (!authData['isAuthenticated']) {
+        state = state.copyWith(
+          isLoading: false,
+          isSuccess: false,
+          errorMessage: 'Please log in first to connect Google Fit.',
+        );
+        return;
+      }
+      
+      // User is authenticated, redirect to Google Fit OAuth
       final connectUrl = '$baseUrl/api/auth/google-fit/connect';
-      // In a real Flutter app, you would use url_launcher to open this URL
-      // For now, we'll simulate the connection process
       
-      // Simulate OAuth process
-      await Future.delayed(Duration(seconds: 2));
-      
+      // In a web environment, we would redirect the window
+      // For now, show a message to the user
       state = state.copyWith(
         isLoading: false,
-        isConnected: true,
-        isSuccess: true,
-        selectedApp: 'Google Fit',
+        isSuccess: false,
+        errorMessage: 'Please open the Google Fit connection URL manually: $connectUrl',
       );
       
     } catch (e) {
@@ -127,7 +177,7 @@ class HealthDataConnectionNotifier
       state = state.copyWith(
         isLoading: false,
         isSuccess: false,
-        errorMessage: 'Failed to connect to Google Fit. Please try again.',
+        errorMessage: 'Failed to connect to Google Fit. Please check your internet connection and try again.',
       );
     }
   }
@@ -164,9 +214,13 @@ class HealthDataConnectionNotifier
         Uri.parse('$baseUrl/api/health-profile'),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: json.encode(profileData),
       );
+      
+      print('Save health profile response: ${response.statusCode}');
+      print('Save health profile body: ${response.body}');
 
       if (response.statusCode == 200) {
         // Save today's activity data if weight is provided
@@ -179,13 +233,27 @@ class HealthDataConnectionNotifier
           isSuccess: true,
           isManualDataSaved: true,
         );
-      } else {
-        final errorData = json.decode(response.body);
+      } else if (response.statusCode == 401) {
         state = state.copyWith(
           isLoading: false,
           isSuccess: false,
-          errorMessage: errorData['message'] ?? 'Failed to save health data',
+          errorMessage: 'Authentication required. Please log in first.',
         );
+      } else {
+        try {
+          final errorData = json.decode(response.body);
+          state = state.copyWith(
+            isLoading: false,
+            isSuccess: false,
+            errorMessage: errorData['message'] ?? 'Failed to save health data',
+          );
+        } catch (parseError) {
+          state = state.copyWith(
+            isLoading: false,
+            isSuccess: false,
+            errorMessage: 'Failed to save health data. Server error: ${response.statusCode}',
+          );
+        }
       }
     } catch (e) {
       print('Error saving manual health data: $e');
@@ -211,13 +279,19 @@ class HealthDataConnectionNotifier
         'notes': 'Initial health data setup',
       };
 
-      await http.post(
+      final response = await http.post(
         Uri.parse('$baseUrl/api/daily-activities'),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: json.encode(activityData),
       );
+      
+      print('Save today activity response: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        print('Save today activity error: ${response.body}');
+      }
     } catch (e) {
       print('Error saving today activity: $e');
     }

@@ -14,18 +14,31 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  // Generate secure session secret if not provided
+  const sessionSecret = process.env.SESSION_SECRET || generateSecureSecret();
+  
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: sessionSecret,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    rolling: true, // Reset cookie expiration on activity
+    name: 'health_app_session', // Custom session name
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: sessionTtl,
+      path: '/',
     },
   });
+}
+
+// Generate secure session secret if not provided
+function generateSecureSecret(): string {
+  const crypto = require('crypto');
+  return crypto.randomBytes(64).toString('hex');
 }
 
 export async function setupAuth(app: Express) {

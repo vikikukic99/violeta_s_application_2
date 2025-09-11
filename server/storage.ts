@@ -151,29 +151,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveDailyActivity(activityData: UpsertDailyActivity): Promise<DailyActivity> {
-    // Check if activity for this date already exists
-    if (activityData.userId && activityData.date) {
-      const existing = await this.getDailyActivity(activityData.userId, activityData.date);
-      if (existing) {
-        // Update existing record
-        const [updated] = await db
-          .update(dailyActivities)
-          .set({
-            ...activityData,
-            updatedAt: new Date(),
-          })
-          .where(eq(dailyActivities.id, existing.id))
-          .returning();
-        return updated;
-      }
-    }
-
-    // Insert new record
+    // Use upsert with proper date handling
+    const activityDate = new Date(activityData.date!);
+    // Normalize to start of day for consistency
+    activityDate.setHours(0, 0, 0, 0);
+    
     const [activity] = await db
       .insert(dailyActivities)
       .values({
         ...activityData,
+        date: activityDate,
         updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [dailyActivities.userId, dailyActivities.date],
+        set: {
+          ...activityData,
+          date: activityDate,
+          updatedAt: new Date(),
+        },
       })
       .returning();
     return activity;
@@ -204,11 +200,18 @@ export class DatabaseStorage implements IStorage {
 
   // Health integrations operations
   async getHealthIntegrations(userId: string): Promise<HealthIntegration[]> {
-    return await db
+    const integrations = await db
       .select()
       .from(healthIntegrations)
       .where(eq(healthIntegrations.userId, userId))
       .orderBy(asc(healthIntegrations.serviceName));
+    
+    // Decrypt tokens for response
+    return integrations.map(integration => ({
+      ...integration,
+      accessToken: integration.accessToken ? this.decryptToken(integration.accessToken) : null,
+      refreshToken: integration.refreshToken ? this.decryptToken(integration.refreshToken) : null,
+    }));
   }
 
   async getHealthIntegration(userId: string, serviceName: string): Promise<HealthIntegration | undefined> {
@@ -221,25 +224,43 @@ export class DatabaseStorage implements IStorage {
           eq(healthIntegrations.serviceName, serviceName)
         )
       );
-    return integration;
+    
+    if (!integration) {
+      return undefined;
+    }
+    
+    // Decrypt tokens for response
+    return {
+      ...integration,
+      accessToken: integration.accessToken ? this.decryptToken(integration.accessToken) : null,
+      refreshToken: integration.refreshToken ? this.decryptToken(integration.refreshToken) : null,
+    };
   }
 
   async saveHealthIntegration(integrationData: UpsertHealthIntegration): Promise<HealthIntegration> {
+    // Encrypt sensitive tokens before storing
+    const encryptedData = {
+      ...integrationData,
+      accessToken: integrationData.accessToken ? this.encryptToken(integrationData.accessToken) : null,
+      refreshToken: integrationData.refreshToken ? this.encryptToken(integrationData.refreshToken) : null,
+      updatedAt: new Date(),
+    };
+    
     const [integration] = await db
       .insert(healthIntegrations)
-      .values({
-        ...integrationData,
-        updatedAt: new Date(),
-      })
+      .values(encryptedData)
       .onConflictDoUpdate({
         target: [healthIntegrations.userId, healthIntegrations.serviceName],
-        set: {
-          ...integrationData,
-          updatedAt: new Date(),
-        },
+        set: encryptedData,
       })
       .returning();
-    return integration;
+    
+    // Decrypt tokens for response
+    return {
+      ...integration,
+      accessToken: integration.accessToken ? this.decryptToken(integration.accessToken) : null,
+      refreshToken: integration.refreshToken ? this.decryptToken(integration.refreshToken) : null,
+    };
   }
 
   async deleteHealthIntegration(userId: string, serviceName: string): Promise<boolean> {
@@ -323,6 +344,50 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result.rowCount > 0;
+  }
+
+  // Token encryption/decryption methods
+  private encryptToken(token: string): string {
+    // Simple encryption - in production, use proper encryption library like crypto
+    const crypto = require('crypto');
+    const algorithm = 'aes-256-cbc';
+    const key = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-12345678';
+    const keyBuffer = Buffer.from(key.padEnd(32).slice(0, 32));
+    const iv = crypto.randomBytes(16);
+    
+    const cipher = crypto.createCipher(algorithm, keyBuffer);
+    let encrypted = cipher.update(token, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    return iv.toString('hex') + ':' + encrypted;
+  }
+  
+  private decryptToken(encryptedToken: string): string {
+    try {
+      const crypto = require('crypto');
+      const algorithm = 'aes-256-cbc';
+      const key = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-12345678';
+      const keyBuffer = Buffer.from(key.padEnd(32).slice(0, 32));
+      
+      const parts = encryptedToken.split(':');
+      if (parts.length !== 2) {
+        // Legacy unencrypted token, return as-is
+        return encryptedToken;
+      }
+      
+      const iv = Buffer.from(parts[0], 'hex');
+      const encryptedText = parts[1];
+      
+      const decipher = crypto.createDecipher(algorithm, keyBuffer);
+      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return decrypted;
+    } catch (error) {
+      // If decryption fails, assume it's an unencrypted token
+      console.warn('Token decryption failed, returning as-is:', error);
+      return encryptedToken;
+    }
   }
 }
 
