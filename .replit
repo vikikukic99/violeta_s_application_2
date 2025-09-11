@@ -1,4 +1,4 @@
-modules = ["web", "nodejs-20", "swift-5.8", "dart-3.8"]
+modules = ["web", "nodejs-20", "swift-5.8", "dart-3.8", "python-3.11"]
 [agent]
 expertMode = true
 
@@ -10,33 +10,8 @@ packages = ["flutter", "nodejs"]
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 41825
-externalPort = 3000
-
 [workflows]
-runButton = "Flutter Web Dev"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Flutter Web Server"
-
-[[workflows.workflow]]
-name = "Flutter Web Server"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "flutter run -d web-server --web-port=5000 --web-hostname=0.0.0.0"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Flutter Web Dev"
@@ -50,6 +25,27 @@ args = "flutter pub get"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "flutter run -d web-server --web-port=5000 --web-hostname=0.0.0.0 --debug"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Flutter Web App"
+
+[[workflows.workflow]]
+name = "Flutter Web App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 -m http.server 5000 -d build/web"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [deployment]
 deploymentTarget = "autoscale"
