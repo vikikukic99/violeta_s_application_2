@@ -10,10 +10,6 @@ packages = ["flutter", "nodejs", "imagemagick_light"]
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 36469
-externalPort = 3001
-
 [workflows]
 runButton = "Project"
 

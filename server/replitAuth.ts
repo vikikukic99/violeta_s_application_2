@@ -93,8 +93,8 @@ export async function setupAuth(app: Express) {
   app.get("/api/callback", 
     passport.authenticate('replit', { failureRedirect: '/api/login' }),
     (req, res) => {
-      // Redirect to Flutter app root
-      res.redirect('/');
+      // Redirect to activity selection screen after successful authentication
+      res.redirect('/#/activity_selection_screen');
     }
   );
 
