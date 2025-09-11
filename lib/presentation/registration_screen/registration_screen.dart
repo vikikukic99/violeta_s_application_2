@@ -276,7 +276,7 @@ class RegistrationScreenState extends ConsumerState<RegistrationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              Wrap(
                 children: [
                   Text(
                     'I agree to the ',
