@@ -10,7 +10,76 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   OnboardingScreenState createState() => OnboardingScreenState();
 }
 
-class OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+class OnboardingScreenState extends ConsumerState<OnboardingScreen>
+    with TickerProviderStateMixin {
+  
+  late AnimationController _fadeController;
+  late AnimationController _scaleController;
+  late AnimationController _floatController;
+  
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _floatAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize animation controllers
+    _fadeController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+    
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    
+    _floatController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+    
+    // Create animations
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.elasticOut,
+    ));
+    
+    _floatAnimation = Tween<double>(
+      begin: 0.0,
+      end: 10.0,
+    ).animate(CurvedAnimation(
+      parent: _floatController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // Start animations
+    _fadeController.forward();
+    _scaleController.forward();
+    _floatController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _scaleController.dispose();
+    _floatController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -189,14 +258,52 @@ class OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildMainImage() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8.h),
-      child: CustomImageView(
-        imagePath: ImageConstant.img,
-        height: 350.h,
-        width: double.infinity,
-        fit: BoxFit.cover,
-      ),
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, child) {
+            return AnimatedBuilder(
+              animation: _floatAnimation,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0, -_floatAnimation.value),
+                  child: Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Container(
+                        margin: EdgeInsets.symmetric(horizontal: 8.h),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20.h),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 20,
+                              offset: Offset(0, 10),
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20.h),
+                          child: CustomImageView(
+                            imagePath: ImageConstant.img,
+                            height: 350.h,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
