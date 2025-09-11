@@ -10,10 +10,6 @@ packages = ["flutter"]
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 36557
-externalPort = 3000
-
 [workflows]
 runButton = "Project"
 
@@ -37,3 +33,8 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["flutter", "run", "-d", "web-server", "--web-port=5000", "--web-hostname=0.0.0.0", "--release"]
+build = ["flutter", "build", "web"]
