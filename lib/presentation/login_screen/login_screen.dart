@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:html' as html;
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_button.dart';
@@ -218,18 +219,8 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
   /// Login button tap
   void _onTapLogin(BuildContext context) {
     if (_formKey.currentState?.validate() ?? false) {
-      ref.read(loginNotifierProvider.notifier).loginUser();
-
-      // Listen for login success
-      ref.listen(
-        loginNotifierProvider,
-        (previous, current) {
-          if (current.isLoginSuccess) {
-            NavigatorService.pushNamedAndRemoveUntil(
-                AppRoutes.activitySelectionScreen);
-          }
-        },
-      );
+      // Redirect to Replit Auth for authentication
+      html.window.location.href = '/api/login';
     }
   }
 
@@ -240,11 +231,13 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
   /// Google login tap
   void _onTapGoogleLogin(BuildContext context) {
-    ref.read(loginNotifierProvider.notifier).loginWithGoogle();
+    // Redirect to Replit Auth (supports Google login)
+    html.window.location.href = '/api/login';
   }
 
   /// Apple login tap
   void _onTapAppleLogin(BuildContext context) {
-    ref.read(loginNotifierProvider.notifier).loginWithApple();
+    // Redirect to Replit Auth (supports Apple login)
+    html.window.location.href = '/api/login';
   }
 }
