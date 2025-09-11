@@ -28,6 +28,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Check auth status
   app.get('/api/auth/status', (req: any, res) => {
+    console.log('Auth status check:', {
+      isAuthenticated: req.isAuthenticated(),
+      hasUser: !!req.user,
+      sessionID: req.sessionID,
+      hasSession: !!req.session
+    });
     res.json({ 
       isAuthenticated: req.isAuthenticated(),
       user: req.user || null

@@ -80,9 +80,12 @@ export async function setupAuth(app: Express) {
 
   passport.deserializeUser(async (id: string, done) => {
     try {
+      console.log('Deserializing user with ID:', id);
       const user = await storage.getUser(id);
+      console.log('User found:', user ? 'Yes' : 'No');
       done(null, user);
     } catch (error) {
+      console.error('Deserialize user error:', error);
       done(error);
     }
   });

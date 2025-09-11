@@ -191,25 +191,30 @@ class SplashScreenState extends ConsumerState<SplashScreen>
 
   void _checkAuthAndNavigate() async {
     try {
-      // Check if user is authenticated by calling the backend
+      // Check if user is authenticated by calling the backend with proper credentials
       final response = await html.HttpRequest.request(
-        '/api/auth/user',
+        '/api/auth/status',
         method: 'GET',
         withCredentials: true,
       );
       
       if (response.status == 200) {
-        // User is authenticated, redirect to activity selection
-        NavigatorService.pushNamedAndRemoveUntil(
-          AppRoutes.activitySelectionScreen,
-        );
-      } else {
-        // User not authenticated, go to onboarding
-        NavigatorService.pushNamedAndRemoveUntil(
-          AppRoutes.onboardingScreen,
-        );
+        final responseData = jsonDecode(response.responseText!);
+        if (responseData['isAuthenticated'] == true && responseData['user'] != null) {
+          // User is authenticated, redirect to activity selection
+          NavigatorService.pushNamedAndRemoveUntil(
+            AppRoutes.activitySelectionScreen,
+          );
+          return;
+        }
       }
+      
+      // User not authenticated or error, go to onboarding
+      NavigatorService.pushNamedAndRemoveUntil(
+        AppRoutes.onboardingScreen,
+      );
     } catch (e) {
+      print('Auth check error: $e');
       // Error checking auth, go to onboarding
       NavigatorService.pushNamedAndRemoveUntil(
         AppRoutes.onboardingScreen,
