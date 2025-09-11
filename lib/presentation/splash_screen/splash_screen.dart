@@ -58,8 +58,8 @@ class SplashScreenState extends ConsumerState<SplashScreen>
     _circleController.repeat();
     _bounceController.repeat(reverse: true);
     
-    // Keep splash visible for 4 seconds, then navigate
-    Future.delayed(const Duration(seconds: 4), () {
+    // Keep splash visible for 6 seconds to show animations, then navigate
+    Future.delayed(const Duration(seconds: 6), () {
       ref.read(splashNotifier.notifier).navigateToNextScreen();
     });
   }

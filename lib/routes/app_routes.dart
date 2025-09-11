@@ -58,6 +58,6 @@ class AppRoutes {
         chatListScreen: (context) => const ChatListScreen(),
         activityDetailScreen: (context) => ActivityDetailScreen(),
         appNavigationScreen: (context) => AppNavigationScreen(),
-        initialRoute: (context) => AppNavigationScreen(),
+        initialRoute: (context) => SplashScreen(),
       };
 }
