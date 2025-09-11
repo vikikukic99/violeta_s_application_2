@@ -23,7 +23,7 @@ class ActivitySelectionScreenState
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(activitySelectionNotifier);
+    final state = ref.watch(activitySelectionNotifierProvider);
 
     return SafeArea(
       child: Scaffold(
@@ -88,7 +88,7 @@ class ActivitySelectionScreenState
                       EdgeInsets.symmetric(horizontal: 16.h, vertical: 16.h),
                   onChanged: (v) {},
                   validator: (value) => ref
-                      .read(activitySelectionNotifier.notifier)
+                      .read(activitySelectionNotifierProvider.notifier)
                       .validateDescription(value),
                 ),
 
@@ -118,7 +118,7 @@ class ActivitySelectionScreenState
   Widget _buildActivitiesGrid() {
     return Consumer(
       builder: (context, ref, _) {
-        final state = ref.watch(activitySelectionNotifier);
+        final state = ref.watch(activitySelectionNotifierProvider);
         return GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
@@ -134,7 +134,7 @@ class ActivitySelectionScreenState
                 activity: activity,
                 onTap: () {
                   ref
-                      .read(activitySelectionNotifier.notifier)
+                      .read(activitySelectionNotifierProvider.notifier)
                       .toggleActivitySelection(activity);
                 },
               );
@@ -148,8 +148,8 @@ class ActivitySelectionScreenState
   Widget _buildLocationField() {
     return Consumer(
       builder: (context, ref, _) {
-        final state = ref.watch(activitySelectionNotifier);
-        final notifier = ref.read(activitySelectionNotifier.notifier);
+        final state = ref.watch(activitySelectionNotifierProvider);
+        final notifier = ref.read(activitySelectionNotifierProvider.notifier);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,7 +259,7 @@ class ActivitySelectionScreenState
                         style: TextStyleHelper.instance.body14RegularInter,
                       ),
                       onTap: () => ref
-                          .read(activitySelectionNotifier.notifier)
+                          .read(activitySelectionNotifierProvider.notifier)
                           .selectCity(city),
                       contentPadding: EdgeInsets.symmetric(horizontal: 16.h),
                       dense: true,
@@ -277,7 +277,7 @@ class ActivitySelectionScreenState
   Widget _buildTimeSelectionRow() {
     return Consumer(
       builder: (context, ref, _) {
-        final state = ref.watch(activitySelectionNotifier);
+        final state = ref.watch(activitySelectionNotifierProvider);
         return Row(
           children: [
             Expanded(
@@ -296,7 +296,7 @@ class ActivitySelectionScreenState
                 backgroundColor: appTheme.green_500,
                 textColor: appTheme.white_A700,
                 onPressed: () =>
-                    ref.read(activitySelectionNotifier.notifier).setStartNow(),
+                    ref.read(activitySelectionNotifierProvider.notifier).setStartNow(),
               ),
             ),
           ],
@@ -309,13 +309,13 @@ class ActivitySelectionScreenState
     final TimeOfDay? picked =
         await showTimePicker(context: context, initialTime: TimeOfDay.now());
     if (picked != null) {
-      ref.read(activitySelectionNotifier.notifier).setSelectedTime(picked);
+      ref.read(activitySelectionNotifierProvider.notifier).setSelectedTime(picked);
     }
   }
 
   void onTapContinue(BuildContext context) {
     if (_formKey.currentState?.validate() ?? false) {
-      ref.read(activitySelectionNotifier.notifier).submitForm();
+      ref.read(activitySelectionNotifierProvider.notifier).submitForm();
       NavigatorService.pushNamed(AppRoutes.healthDataConnectionScreen);
     }
   }

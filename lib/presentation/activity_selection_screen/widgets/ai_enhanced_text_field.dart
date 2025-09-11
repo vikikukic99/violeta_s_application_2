@@ -30,10 +30,8 @@ class AIEnhancedTextField extends ConsumerStatefulWidget {
 
 class _AIEnhancedTextFieldState extends ConsumerState<AIEnhancedTextField> {
   Future<void> _openAISuggestions() async {
-    final notifier = ref.read(activitySelectionNotifier.notifier);
-    final suggestions = await notifier.getAISuggestions(
-      currentText: widget.controller.text,
-    );
+    final notifier = ref.read(activitySelectionNotifierProvider.notifier);
+    final suggestions = await notifier.getAISuggestions();
 
     if (!mounted) return;
 
