@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:html' as html;
+import 'dart:convert';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_button.dart';
@@ -325,8 +326,30 @@ class RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       ),
       isEnabled: !(state.isLoading ?? false),
       onPressed: () {
-        // Redirect to Replit Auth for account creation
-        html.window.location.href = '/api/login';
+        // Validate form first
+        if (_formKey.currentState!.validate()) {
+          // Check if terms are agreed
+          if (!(state.isTermsAgreed ?? false)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please agree to the terms and conditions')),
+            );
+            return;
+          }
+          
+          // Store form data in session storage before redirecting
+          final userData = {
+            'fullName': state.fullNameController?.text.trim() ?? '',
+            'nickname': state.nicknameController?.text.trim() ?? '',
+            'email': state.emailController?.text.trim() ?? '',
+          };
+          
+          // Store in browser's session storage
+          html.window.sessionStorage['registration_data'] = 
+              jsonEncode(userData);
+          
+          // Redirect to Replit Auth for account creation
+          html.window.location.href = '/api/login';
+        }
       },
     );
   }

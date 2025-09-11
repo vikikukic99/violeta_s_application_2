@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:html' as html;
+import 'dart:convert';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_button.dart';
@@ -27,6 +29,64 @@ class ActivitySelectionScreenState
     'Passionate about wellness and building meaningful connections through shared activities.',
     'I’m training for a 5K and would love accountability buddies for weekend runs.',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Check for registration data after authentication
+    _handleRegistrationData();
+  }
+
+  Future<void> _handleRegistrationData() async {
+    try {
+      final registrationDataJson = html.window.sessionStorage['registration_data'];
+      if (registrationDataJson != null) {
+        final registrationData = jsonDecode(registrationDataJson);
+        
+        // Send registration data to backend
+        await _updateUserProfile(registrationData);
+        
+        // Clear the registration data from storage
+        html.window.sessionStorage.remove('registration_data');
+      }
+    } catch (e) {
+      print('Error handling registration data: $e');
+    }
+  }
+
+  Future<void> _updateUserProfile(Map<String, dynamic> userData) async {
+    try {
+      final response = await html.HttpRequest.request(
+        '/api/update-profile',
+        method: 'POST',
+        requestHeaders: {
+          'Content-Type': 'application/json',
+        },
+        sendData: jsonEncode({
+          'fullName': userData['fullName'],
+          'nickname': userData['nickname'],
+        }),
+        withCredentials: true,
+      );
+
+      if (response.status == 200) {
+        print('User profile updated successfully');
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Profile updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        print('Failed to update user profile: ${response.statusText}');
+      }
+    } catch (e) {
+      print('Error updating user profile: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

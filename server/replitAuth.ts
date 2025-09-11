@@ -94,6 +94,7 @@ export async function setupAuth(app: Express) {
     passport.authenticate('replit', { failureRedirect: '/api/login' }),
     (req, res) => {
       // Redirect to activity selection screen after successful authentication
+      // The registration data will be captured by the frontend and sent via API
       res.redirect('/#/activity_selection_screen');
     }
   );
@@ -105,6 +106,38 @@ export async function setupAuth(app: Express) {
       }
       res.redirect('/');
     });
+  });
+
+  // Update user profile with registration data
+  app.post("/api/update-profile", isAuthenticated, async (req, res) => {
+    try {
+      const { fullName, nickname } = req.body;
+      const userId = (req.user as any).id;
+
+      if (!fullName || !nickname) {
+        return res.status(400).json({ message: "Full name and nickname are required" });
+      }
+
+      // Parse fullName into first and last name
+      const names = fullName.split(' ');
+      const firstName = names[0] || null;
+      const lastName = names.slice(1).join(' ') || null;
+
+      // Update user profile using upsert
+      const updatedUser = await storage.upsertUser({
+        id: userId,
+        firstName,
+        lastName,
+        email: (req.user as any).email, // Keep existing email
+        profileImageUrl: (req.user as any).profileImageUrl, // Keep existing image
+      });
+
+      console.log('User profile updated:', updatedUser);
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
   });
 }
 
