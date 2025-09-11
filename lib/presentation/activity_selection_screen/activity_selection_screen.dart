@@ -496,10 +496,20 @@ class ActivitySelectionScreenState
   }
 
   void onTapContinue(BuildContext context) async {
+    // Validate description field first
+    final state = ref.read(activitySelectionNotifier);
+    if (state.descriptionController?.text.trim().isEmpty ?? true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please tell us more about yourself'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
     if (_formKey.currentState?.validate() ?? false) {
       try {
-        // Get the current state
-        final state = ref.read(activitySelectionNotifier);
         final selectedActivities = state.activitiesList
             ?.where((activity) => activity.isSelected ?? false)
             .toList() ?? [];
@@ -508,6 +518,17 @@ class ActivitySelectionScreenState
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Please select at least one activity'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+        
+        // Validate location
+        if (state.locationController?.text.trim().isEmpty ?? true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter your location'),
               backgroundColor: Colors.orange,
             ),
           );
