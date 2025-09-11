@@ -1,13 +1,25 @@
 import {
   users,
   activityPreferences,
+  healthProfiles,
+  dailyActivities,
+  healthIntegrations,
+  healthSessions,
   type User,
   type UpsertUser,
   type ActivityPreference,
   type UpsertActivityPreference,
+  type HealthProfile,
+  type UpsertHealthProfile,
+  type DailyActivity,
+  type UpsertDailyActivity,
+  type HealthIntegration,
+  type UpsertHealthIntegration,
+  type HealthSession,
+  type UpsertHealthSession,
 } from "../shared/schema.js";
 import { db } from "./db.js";
-import { eq } from "drizzle-orm";
+import { eq, and, gte, lte, desc, asc } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -18,7 +30,30 @@ export interface IStorage {
   // Activity preferences operations
   saveActivityPreferences(userId: string, preferences: UpsertActivityPreference[]): Promise<ActivityPreference[]>;
   getUserActivityPreferences(userId: string): Promise<ActivityPreference[]>;
-  // Other operations
+  
+  // Health profile operations
+  getHealthProfile(userId: string): Promise<HealthProfile | undefined>;
+  upsertHealthProfile(profileData: UpsertHealthProfile): Promise<HealthProfile>;
+  
+  // Daily activities operations
+  getDailyActivity(userId: string, date: Date): Promise<DailyActivity | undefined>;
+  saveDailyActivity(activityData: UpsertDailyActivity): Promise<DailyActivity>;
+  getDailyActivitiesRange(userId: string, startDate: Date, endDate: Date): Promise<DailyActivity[]>;
+  getRecentDailyActivities(userId: string, limit?: number): Promise<DailyActivity[]>;
+  
+  // Health integrations operations
+  getHealthIntegrations(userId: string): Promise<HealthIntegration[]>;
+  getHealthIntegration(userId: string, serviceName: string): Promise<HealthIntegration | undefined>;
+  saveHealthIntegration(integrationData: UpsertHealthIntegration): Promise<HealthIntegration>;
+  deleteHealthIntegration(userId: string, serviceName: string): Promise<boolean>;
+  updateHealthIntegrationSync(userId: string, serviceName: string): Promise<boolean>;
+  
+  // Health sessions operations
+  saveHealthSession(sessionData: UpsertHealthSession): Promise<HealthSession>;
+  getHealthSessions(userId: string, limit?: number): Promise<HealthSession[]>;
+  getHealthSessionsRange(userId: string, startDate: Date, endDate: Date): Promise<HealthSession[]>;
+  getHealthSession(sessionId: string): Promise<HealthSession | undefined>;
+  deleteHealthSession(sessionId: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -71,7 +106,224 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(activityPreferences).where(eq(activityPreferences.userId, userId));
   }
 
-  // Other operations can be added here as needed
+  // Health profile operations
+  async getHealthProfile(userId: string): Promise<HealthProfile | undefined> {
+    const [profile] = await db.select().from(healthProfiles).where(eq(healthProfiles.userId, userId));
+    return profile;
+  }
+
+  async upsertHealthProfile(profileData: UpsertHealthProfile): Promise<HealthProfile> {
+    const [profile] = await db
+      .insert(healthProfiles)
+      .values({
+        ...profileData,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: healthProfiles.userId,
+        set: {
+          ...profileData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return profile;
+  }
+
+  // Daily activities operations
+  async getDailyActivity(userId: string, date: Date): Promise<DailyActivity | undefined> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [activity] = await db
+      .select()
+      .from(dailyActivities)
+      .where(
+        and(
+          eq(dailyActivities.userId, userId),
+          gte(dailyActivities.date, startOfDay),
+          lte(dailyActivities.date, endOfDay)
+        )
+      );
+    return activity;
+  }
+
+  async saveDailyActivity(activityData: UpsertDailyActivity): Promise<DailyActivity> {
+    // Check if activity for this date already exists
+    if (activityData.userId && activityData.date) {
+      const existing = await this.getDailyActivity(activityData.userId, activityData.date);
+      if (existing) {
+        // Update existing record
+        const [updated] = await db
+          .update(dailyActivities)
+          .set({
+            ...activityData,
+            updatedAt: new Date(),
+          })
+          .where(eq(dailyActivities.id, existing.id))
+          .returning();
+        return updated;
+      }
+    }
+
+    // Insert new record
+    const [activity] = await db
+      .insert(dailyActivities)
+      .values({
+        ...activityData,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return activity;
+  }
+
+  async getDailyActivitiesRange(userId: string, startDate: Date, endDate: Date): Promise<DailyActivity[]> {
+    return await db
+      .select()
+      .from(dailyActivities)
+      .where(
+        and(
+          eq(dailyActivities.userId, userId),
+          gte(dailyActivities.date, startDate),
+          lte(dailyActivities.date, endDate)
+        )
+      )
+      .orderBy(asc(dailyActivities.date));
+  }
+
+  async getRecentDailyActivities(userId: string, limit: number = 30): Promise<DailyActivity[]> {
+    return await db
+      .select()
+      .from(dailyActivities)
+      .where(eq(dailyActivities.userId, userId))
+      .orderBy(desc(dailyActivities.date))
+      .limit(limit);
+  }
+
+  // Health integrations operations
+  async getHealthIntegrations(userId: string): Promise<HealthIntegration[]> {
+    return await db
+      .select()
+      .from(healthIntegrations)
+      .where(eq(healthIntegrations.userId, userId))
+      .orderBy(asc(healthIntegrations.serviceName));
+  }
+
+  async getHealthIntegration(userId: string, serviceName: string): Promise<HealthIntegration | undefined> {
+    const [integration] = await db
+      .select()
+      .from(healthIntegrations)
+      .where(
+        and(
+          eq(healthIntegrations.userId, userId),
+          eq(healthIntegrations.serviceName, serviceName)
+        )
+      );
+    return integration;
+  }
+
+  async saveHealthIntegration(integrationData: UpsertHealthIntegration): Promise<HealthIntegration> {
+    const [integration] = await db
+      .insert(healthIntegrations)
+      .values({
+        ...integrationData,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [healthIntegrations.userId, healthIntegrations.serviceName],
+        set: {
+          ...integrationData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return integration;
+  }
+
+  async deleteHealthIntegration(userId: string, serviceName: string): Promise<boolean> {
+    const result = await db
+      .delete(healthIntegrations)
+      .where(
+        and(
+          eq(healthIntegrations.userId, userId),
+          eq(healthIntegrations.serviceName, serviceName)
+        )
+      );
+    return result.rowCount > 0;
+  }
+
+  async updateHealthIntegrationSync(userId: string, serviceName: string): Promise<boolean> {
+    const result = await db
+      .update(healthIntegrations)
+      .set({
+        lastSyncAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(healthIntegrations.userId, userId),
+          eq(healthIntegrations.serviceName, serviceName)
+        )
+      );
+    return result.rowCount > 0;
+  }
+
+  // Health sessions operations
+  async saveHealthSession(sessionData: UpsertHealthSession): Promise<HealthSession> {
+    const [session] = await db
+      .insert(healthSessions)
+      .values({
+        ...sessionData,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return session;
+  }
+
+  async getHealthSessions(userId: string, limit: number = 50): Promise<HealthSession[]> {
+    return await db
+      .select()
+      .from(healthSessions)
+      .where(eq(healthSessions.userId, userId))
+      .orderBy(desc(healthSessions.startTime))
+      .limit(limit);
+  }
+
+  async getHealthSessionsRange(userId: string, startDate: Date, endDate: Date): Promise<HealthSession[]> {
+    return await db
+      .select()
+      .from(healthSessions)
+      .where(
+        and(
+          eq(healthSessions.userId, userId),
+          gte(healthSessions.startTime, startDate),
+          lte(healthSessions.startTime, endDate)
+        )
+      )
+      .orderBy(desc(healthSessions.startTime));
+  }
+
+  async getHealthSession(sessionId: string): Promise<HealthSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(healthSessions)
+      .where(eq(healthSessions.id, sessionId));
+    return session;
+  }
+
+  async deleteHealthSession(sessionId: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(healthSessions)
+      .where(
+        and(
+          eq(healthSessions.id, sessionId),
+          eq(healthSessions.userId, userId)
+        )
+      );
+    return result.rowCount > 0;
+  }
 }
 
 export const storage = new DatabaseStorage();

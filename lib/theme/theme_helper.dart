@@ -74,6 +74,12 @@ class LightCodeColors {
   Color get white_A700_01 => const Color(0xFFFCFDFF);
   Color get black_900 => const Color(0xFF000000);
   Color get red_A700 => const Color(0xFFFF0000);
+  Color get red_50 => const Color(0xFFFEF2F2);
+  Color get red_300 => const Color(0xFFFCA5A5);
+  Color get red_500 => const Color(0xFFEF4444);
+  Color get red_700 => const Color(0xFFB91C1C);
+  Color get blue_gray_400 => const Color(0xFF94A3B8);
+  Color get green_300 => const Color(0xFF86EFAC);
 
   // ----- Grays -----
   Color get gray_50   => const Color(0xFFF9FAFB);

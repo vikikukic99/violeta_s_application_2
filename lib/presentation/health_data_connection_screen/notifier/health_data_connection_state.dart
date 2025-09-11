@@ -6,7 +6,10 @@ class HealthDataConnectionState extends Equatable {
   final bool isConnected;
   final bool isSuccess;
   final bool isSkipped;
+  final bool isManualDataSaved;
   final String? selectedApp;
+  final String? errorMessage;
+  final List<Map<String, dynamic>> existingIntegrations;
 
   HealthDataConnectionState({
     this.healthDataConnectionModel,
@@ -14,7 +17,10 @@ class HealthDataConnectionState extends Equatable {
     this.isConnected = false,
     this.isSuccess = false,
     this.isSkipped = false,
+    this.isManualDataSaved = false,
     this.selectedApp,
+    this.errorMessage,
+    this.existingIntegrations = const [],
   });
 
   @override
@@ -24,7 +30,10 @@ class HealthDataConnectionState extends Equatable {
         isConnected,
         isSuccess,
         isSkipped,
+        isManualDataSaved,
         selectedApp,
+        errorMessage,
+        existingIntegrations,
       ];
 
   HealthDataConnectionState copyWith({
@@ -33,7 +42,10 @@ class HealthDataConnectionState extends Equatable {
     bool? isConnected,
     bool? isSuccess,
     bool? isSkipped,
+    bool? isManualDataSaved,
     String? selectedApp,
+    String? errorMessage,
+    List<Map<String, dynamic>>? existingIntegrations,
   }) {
     return HealthDataConnectionState(
       healthDataConnectionModel:
@@ -42,7 +54,10 @@ class HealthDataConnectionState extends Equatable {
       isConnected: isConnected ?? this.isConnected,
       isSuccess: isSuccess ?? this.isSuccess,
       isSkipped: isSkipped ?? this.isSkipped,
+      isManualDataSaved: isManualDataSaved ?? this.isManualDataSaved,
       selectedApp: selectedApp ?? this.selectedApp,
+      errorMessage: errorMessage,
+      existingIntegrations: existingIntegrations ?? this.existingIntegrations,
     );
   }
 }

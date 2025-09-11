@@ -24,6 +24,7 @@ dependencies:
   geocoding: ^4.0.0
   dio: ^5.9.0
   path_provider: ^2.1.5
+  http: ^1.1.0
 dev_dependencies: 
   flutter_test:    # 🚨 CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter    # 🚨 CRITICAL: Required for Flutter project testing - DO NOT REMOVE

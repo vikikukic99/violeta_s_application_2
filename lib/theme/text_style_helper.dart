@@ -59,6 +59,13 @@ class TextStyleHelper {
         color: appTheme.green_500,
       );
 
+  TextStyle get headline20BoldInter => TextStyle(
+        fontSize: 20.fSize,
+        fontWeight: FontWeight.w700,
+        fontFamily: 'Inter',
+        color: appTheme.blue_gray_900,
+      );
+
   // Title Styles
   // Medium text styles for titles and subtitles
 
