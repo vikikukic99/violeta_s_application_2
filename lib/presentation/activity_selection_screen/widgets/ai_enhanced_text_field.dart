@@ -1,5 +1,7 @@
 // lib/presentation/activity_selection_screen/widgets/ai_enhanced_text_field.dart
 import 'package:flutter/material.dart';
+import 'dart:html' as html;
+import 'dart:convert';
 import '../../../core/app_export.dart'; // appTheme + TextStyleHelper
 
 /// Text field with an "AI Assistant" button.
@@ -28,7 +30,8 @@ class AIEnhancedTextField extends StatefulWidget {
 }
 
 class _AIEnhancedTextFieldState extends State<AIEnhancedTextField> {
-  late final List<String> _suggestions;
+  List<String> _suggestions = [];
+  bool _isLoadingSuggestions = false;
 
   @override
   void initState() {
@@ -38,7 +41,56 @@ class _AIEnhancedTextFieldState extends State<AIEnhancedTextField> {
           "I love exploring new walking routes and discovering hidden gems in the city.",
           "Looking for motivated fitness companions who enjoy morning walks and healthy conversations.",
           "Passionate about wellness and building meaningful connections through shared activities.",
+          "Training for my fitness goals and would love accountability buddies for regular activities.",
         ];
+  }
+
+  Future<void> _fetchAISuggestions() async {
+    setState(() {
+      _isLoadingSuggestions = true;
+    });
+
+    try {
+      // Get context from parent (if available)
+      final requestData = {
+        'activities': [],
+        'location': '',
+        'preferredTime': '',
+      };
+
+      final response = await html.HttpRequest.request(
+        '/api/generate-suggestions',
+        method: 'POST',
+        requestHeaders: {
+          'Content-Type': 'application/json',
+        },
+        sendData: jsonEncode(requestData),
+        withCredentials: true,
+      );
+
+      if (response.status == 200) {
+        final data = jsonDecode(response.responseText ?? '{}');
+        if (data['suggestions'] != null && data['suggestions'] is List) {
+          setState(() {
+            _suggestions = List<String>.from(data['suggestions']);
+            _isLoadingSuggestions = false;
+          });
+        } else {
+          setState(() {
+            _isLoadingSuggestions = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoadingSuggestions = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching AI suggestions: $e');
+      setState(() {
+        _isLoadingSuggestions = false;
+      });
+    }
   }
 
   void _applySuggestion(String text) {
@@ -51,6 +103,9 @@ class _AIEnhancedTextFieldState extends State<AIEnhancedTextField> {
   }
 
   Future<void> _openAISuggestionsSheet() async {
+    // Fetch fresh suggestions when opening the sheet
+    await _fetchAISuggestions();
+    
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: false,
@@ -90,8 +145,17 @@ class _AIEnhancedTextFieldState extends State<AIEnhancedTextField> {
                 ),
                 SizedBox(height: 12.h),
 
-                // Suggestions list
-                Flexible(
+                // Loading or suggestions list
+                _isLoadingSuggestions
+                    ? Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.h),
+                          child: CircularProgressIndicator(
+                            color: appTheme.green_500,
+                          ),
+                        ),
+                      )
+                    : Flexible(
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: _suggestions.length,

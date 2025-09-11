@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { setupAuth, isAuthenticated } from "./replitAuth.js";
 import { setupGoogleFitAuth, setupGoogleFitRoutes } from "./googleFitAuth.js";
+import { setupOpenAIRoutes } from "./openai.js";
 import express from "express";
 import cors from "cors";
 
@@ -21,6 +22,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup Google Fit routes
   setupGoogleFitRoutes(app);
+  
+  // Setup OpenAI routes
+  setupOpenAIRoutes(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {

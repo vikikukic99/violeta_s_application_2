@@ -1,6 +1,7 @@
 modules = ["web", "nodejs-20", "swift-5.8", "dart-3.8", "python-3.11", "postgresql-16"]
 [agent]
 expertMode = true
+integrations = ["javascript_openai:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
@@ -15,7 +16,7 @@ localPort = 36961
 externalPort = 3000
 
 [[ports]]
-localPort = 38803
+localPort = 46357
 externalPort = 3001
 
 [workflows]

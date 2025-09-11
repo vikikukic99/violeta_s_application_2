@@ -146,10 +146,6 @@ class ActivitySelectionScreenState
                 /// Description with AI-enhanced text field
                 _buildAIEnhancedDescriptionField(),
 
-                /// Small AI Assistant chip that opens a popup of suggestions
-                SizedBox(height: 12.h),
-                _buildAiAssistantChip(),
-
                 SizedBox(height: 40.h),
 
                 /// Continue — uses frameless Material icon (no white box)
@@ -386,34 +382,6 @@ class ActivitySelectionScreenState
     );
   }
 
-  Widget _buildAiAssistantChip() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16.h),
-        onTap: _showAiSuggestionsSheet,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.h, vertical: 8.h),
-          decoration: BoxDecoration(
-            color: appTheme.green_100,
-            borderRadius: BorderRadius.circular(16.h),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.auto_awesome, size: 16.h, color: appTheme.green_600),
-              SizedBox(width: 6.h),
-              Text(
-                'AI Assistant',
-                style: TextStyleHelper.instance.body12MediumPoppins
-                    .copyWith(color: appTheme.green_600),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   void _showTimePicker(BuildContext context) async {
     final TimeOfDay? picked =

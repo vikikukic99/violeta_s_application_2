@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:html' as html;
 
 import '../../../core/app_export.dart';
 import '../models/activity_model.dart';
@@ -134,69 +136,150 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
     try {
       state = state.copyWith(isSearchingLocation: true, locationError: null);
 
-      // Check location permissions
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        state = state.copyWith(
-          isSearchingLocation: false,
-          locationError: 'Location services are disabled.',
-        );
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
+      // For web, use browser's geolocation API
+      if (kIsWeb) {
+        // Use JavaScript interop to get browser location
+        final html.Geolocation? geo = html.window.navigator.geolocation;
+        
+        if (geo == null) {
           state = state.copyWith(
             isSearchingLocation: false,
-            locationError: 'Location permissions are denied',
+            locationError: 'Geolocation is not supported by your browser.',
           );
           return;
         }
-      }
 
-      if (permission == LocationPermission.deniedForever) {
-        state = state.copyWith(
-          isSearchingLocation: false,
-          locationError:
-              'Location permissions are permanently denied, please enable them in settings.',
-        );
-        return;
-      }
+        // Request current position
+        geo.getCurrentPosition().then((html.Geoposition position) async {
+          try {
+            final lat = (position.coords?.latitude ?? 0.0).toDouble();
+            final lon = (position.coords?.longitude ?? 0.0).toDouble();
 
-      // Get current position
-      final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 30),
-        ),
-      );
+            // Get city name from coordinates using reverse geocoding
+            final placemarks = await placemarkFromCoordinates(lat, lon);
 
-      // Get city name from coordinates
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
+            if (placemarks.isNotEmpty) {
+              final placemark = placemarks.first;
+              final cityName =
+                  '${placemark.locality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.country ?? ''}'
+                      .replaceAll(RegExp(r'^,|,$'), '')
+                      .replaceAll(', ,', ', ');
 
-      if (placemarks.isNotEmpty) {
-        final placemark = placemarks.first;
-        final cityName =
-            '${placemark.locality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.country ?? ''}'
-                .replaceAll(RegExp(r'^,|,$'), '')
-                .replaceAll(', ,', ', ');
-
-        state.locationController?.text = cityName;
-        state = state.copyWith(
-          selectedCity: cityName,
-          currentPosition: position,
-          isSearchingLocation: false,
-        );
+              state.locationController?.text = cityName;
+              state = state.copyWith(
+                selectedCity: cityName,
+                currentPosition: Position(
+                  latitude: lat,
+                  longitude: lon,
+                  timestamp: DateTime.now(),
+                  accuracy: (position.coords?.accuracy ?? 0.0).toDouble(),
+                  altitude: (position.coords?.altitude ?? 0.0).toDouble(),
+                  altitudeAccuracy: (position.coords?.altitudeAccuracy ?? 0.0).toDouble(),
+                  heading: (position.coords?.heading ?? 0.0).toDouble(),
+                  headingAccuracy: 0.0,
+                  speed: (position.coords?.speed ?? 0.0).toDouble(),
+                  speedAccuracy: 0.0,
+                ),
+                isSearchingLocation: false,
+              );
+            } else {
+              state = state.copyWith(
+                isSearchingLocation: false,
+                locationError: 'Could not determine city from current location',
+              );
+            }
+          } catch (e) {
+            state = state.copyWith(
+              isSearchingLocation: false,
+              locationError: 'Failed to get city name: ${e.toString()}',
+            );
+          }
+        }).catchError((error) {
+          String errorMessage = 'Location access denied';
+          if (error is html.PositionError) {
+            switch (error.code) {
+              case 1:
+                errorMessage = 'Location access denied. Please enable location permissions.';
+                break;
+              case 2:
+                errorMessage = 'Position unavailable. Please try again.';
+                break;
+              case 3:
+                errorMessage = 'Location request timed out. Please try again.';
+                break;
+            }
+          }
+          state = state.copyWith(
+            isSearchingLocation: false,
+            locationError: errorMessage,
+          );
+        });
       } else {
-        state = state.copyWith(
-          isSearchingLocation: false,
-          locationError: 'Could not determine city from current location',
+        // Fallback for non-web platforms (mobile/desktop)
+        // Check location permissions
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          state = state.copyWith(
+            isSearchingLocation: false,
+            locationError: 'Location services are disabled.',
+          );
+          return;
+        }
+
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            state = state.copyWith(
+              isSearchingLocation: false,
+              locationError: 'Location permissions are denied',
+            );
+            return;
+          }
+        }
+
+        if (permission == LocationPermission.deniedForever) {
+          state = state.copyWith(
+            isSearchingLocation: false,
+            locationError:
+                'Location permissions are permanently denied, please enable them in settings.',
+          );
+          return;
+        }
+
+        // Get current position
+        final Position position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 30),
+          ),
         );
+
+        // Get city name from coordinates
+        final placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+
+        if (placemarks.isNotEmpty) {
+          final placemark = placemarks.first;
+          final cityName =
+              '${placemark.locality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.country ?? ''}'
+                  .replaceAll(RegExp(r'^,|,$'), '')
+                  .replaceAll(', ,', ', ');
+
+          state.locationController?.text = cityName;
+          state = state.copyWith(
+            selectedCity: cityName,
+            currentPosition: position,
+            isSearchingLocation: false,
+          );
+        } else {
+          state = state.copyWith(
+            isSearchingLocation: false,
+            locationError: 'Could not determine city from current location',
+          );
+        }
       }
     } catch (e) {
       state = state.copyWith(
