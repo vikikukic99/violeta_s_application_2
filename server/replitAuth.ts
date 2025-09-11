@@ -1,4 +1,4 @@
-import { Strategy as OpenIDConnectStrategy } from "passport-openidconnect";
+import { Strategy as OpenIDConnectStrategy } from "@govtechsg/passport-openidconnect";
 import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
@@ -44,18 +44,24 @@ export async function setupAuth(app: Express) {
     clientSecret: process.env.CLIENT_SECRET!,
     callbackURL: '/api/callback',
     scope: ['openid', 'email', 'profile'],
-    usePKCE: true, // Enable PKCE for enhanced security
-  }, async function verify(issuer: string, sub: string, profile: any, jwtClaims: any, accessToken: string, refreshToken: string, params: any, done: any) {
+    pkce: "S256", // Enable PKCE with SHA256 method
+  }, async function verify(issuer: string, profile: any, done: any) {
     try {
-      console.log('Auth verify callback:', { sub, profile: profile?._json });
+      console.log('Auth verify callback:', { issuer, profile });
+      
+      // Extract sub from profile
+      const sub = profile.id || profile._json?.sub;
+      if (!sub) {
+        throw new Error('No sub found in profile');
+      }
       
       // Upsert user in database using sub as ID
       const userData = {
         id: sub,
-        email: profile?._json?.email || null,
-        firstName: profile?._json?.first_name || null,
-        lastName: profile?._json?.last_name || null,
-        profileImageUrl: profile?._json?.profile_image_url || null,
+        email: profile._json?.email || profile.emails?.[0]?.value || null,
+        firstName: profile._json?.first_name || profile.name?.givenName || null,
+        lastName: profile._json?.last_name || profile.name?.familyName || null,
+        profileImageUrl: profile._json?.profile_image_url || profile.photos?.[0]?.value || null,
       };
       
       const user = await storage.upsertUser(userData);
