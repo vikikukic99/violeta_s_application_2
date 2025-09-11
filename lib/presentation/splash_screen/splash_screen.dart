@@ -14,77 +14,59 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
-  // Set this to the EXACT path of your JSON in pubspec.yaml
-  static const String kLottiePath = 'assets/anim/walktalk_running.json';
   
-  late AnimationController _scaleController;
-  late AnimationController _rotationController;
-  late AnimationController _pulseController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _rotationAnimation;
-  late Animation<double> _pulseAnimation;
+  late AnimationController _walkController;
+  late AnimationController _bounceController;
+  late Animation<double> _walkAnimation;
+  late Animation<double> _bounceAnimation;
 
   @override
   void initState() {
     super.initState();
     
-    // Initialize animation controllers
-    _scaleController = AnimationController(
-      duration: const Duration(seconds: 2),
+    // Initialize animation controllers for walking motion
+    _walkController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
     
-    _rotationController = AnimationController(
-      duration: const Duration(seconds: 3),
+    _bounceController = AnimationController(
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-    
-    // Create animations
-    _scaleAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
+    // Create walking animation (horizontal movement)
+    _walkAnimation = Tween<double>(
+      begin: -50.0,
+      end: 50.0,
     ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.elasticOut,
-    ));
-    
-    _rotationAnimation = Tween<double>(
-      begin: 0,
-      end: 2 * 3.14159, // Full rotation
-    ).animate(CurvedAnimation(
-      parent: _rotationController,
-      curve: Curves.linear,
-    ));
-    
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
+      parent: _walkController,
       curve: Curves.easeInOut,
     ));
     
-    // Start animations
-    _scaleController.forward();
-    _rotationController.repeat();
-    _pulseController.repeat(reverse: true);
+    // Create bounce animation (vertical movement)
+    _bounceAnimation = Tween<double>(
+      begin: 0.0,
+      end: -15.0,
+    ).animate(CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.bounceOut,
+    ));
     
-    // Keep splash visible for 5 seconds, then navigate
-    Future.delayed(const Duration(seconds: 5), () {
+    // Start walking animation
+    _walkController.repeat(reverse: true);
+    _bounceController.repeat(reverse: true);
+    
+    // Keep splash visible for 4 seconds, then navigate
+    Future.delayed(const Duration(seconds: 4), () {
       ref.read(splashNotifier.notifier).navigateToNextScreen();
     });
   }
 
   @override
   void dispose() {
-    _scaleController.dispose();
-    _rotationController.dispose();
-    _pulseController.dispose();
+    _walkController.dispose();
+    _bounceController.dispose();
     super.dispose();
   }
 
@@ -107,64 +89,46 @@ class SplashScreenState extends ConsumerState<SplashScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Animated icon with multiple effects
+                  // Walking animated icon
                   AnimatedBuilder(
-                    animation: _scaleAnimation,
+                    animation: _walkAnimation,
                     builder: (context, child) {
                       return AnimatedBuilder(
-                        animation: _pulseAnimation,
+                        animation: _bounceAnimation,
                         builder: (context, child) {
-                          return AnimatedBuilder(
-                            animation: _rotationAnimation,
-                            builder: (context, child) {
-                              return Transform.scale(
-                                scale: _scaleAnimation.value * _pulseAnimation.value,
-                                child: Transform.rotate(
-                                  angle: _rotationAnimation.value,
-                                  child: Container(
-                                    width: 120.h,
-                                    height: 120.h,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.white,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.white.withOpacity(0.3),
-                                          blurRadius: 20 * _pulseAnimation.value,
-                                          spreadRadius: 10 * _pulseAnimation.value,
-                                        ),
-                                      ],
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Container(
-                                      width: 96.h,
-                                      height: 96.h,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.white,
-                                      ),
-                                      child: Lottie.asset(
-                                        kLottiePath,
-                                        repeat: true,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (context, err, stack) {
-                                          // Animated fallback icon
-                                          return Transform.rotate(
-                                            angle: -_rotationAnimation.value, // Counter-rotate to keep icon upright
-                                            child: CustomImageView(
-                                              imagePath: ImageConstant.imgIGreen500,
-                                              height: 50.h,
-                                              width: 50.h,
-                                              fit: BoxFit.contain,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
+                          return Transform.translate(
+                            offset: Offset(_walkAnimation.value, _bounceAnimation.value),
+                            child: Container(
+                              width: 100.h,
+                              height: 100.h,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.white.withOpacity(0.4),
+                                    blurRadius: 15,
+                                    spreadRadius: 5,
                                   ),
-                                ),
-                              );
-                            },
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: Lottie.asset(
+                                'assets/anim/walktalk_running.json',
+                                repeat: true,
+                                fit: BoxFit.contain,
+                                width: 70.h,
+                                height: 70.h,
+                                errorBuilder: (context, err, stack) {
+                                  // Walking person icon fallback
+                                  return Icon(
+                                    Icons.directions_walk,
+                                    color: appTheme.green_500,
+                                    size: 50.h,
+                                  );
+                                },
+                              ),
+                            ),
                           );
                         },
                       );
