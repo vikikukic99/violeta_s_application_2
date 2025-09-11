@@ -16,6 +16,9 @@ class AIEnhancedTextField extends StatefulWidget {
     this.onChanged,
     this.validator,
     this.suggestions,
+    this.activities,
+    this.locationContext,
+    this.preferredTimeContext,
   }) : super(key: key);
 
   final TextEditingController controller;
@@ -24,6 +27,9 @@ class AIEnhancedTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final String? Function(String?)? validator;
   final List<String>? suggestions;
+  final List<Map<String, dynamic>>? activities;
+  final String? locationContext;
+  final String? preferredTimeContext;
 
   @override
   State<AIEnhancedTextField> createState() => _AIEnhancedTextFieldState();
@@ -51,12 +57,17 @@ class _AIEnhancedTextFieldState extends State<AIEnhancedTextField> {
     });
 
     try {
-      // Get context from parent (if available)
+      // Get context from parent widget - use actual selected activities and user inputs
       final requestData = {
-        'activities': [],
-        'location': '',
-        'preferredTime': '',
+        'activities': widget.activities ?? [],
+        'location': widget.locationContext ?? '',
+        'preferredTime': widget.preferredTimeContext ?? '',
       };
+
+      print('[AI Assistant] Fetching suggestions with context:');
+      print('[AI Assistant] Activities: ${widget.activities}');
+      print('[AI Assistant] Location: ${widget.locationContext}');
+      print('[AI Assistant] Preferred Time: ${widget.preferredTimeContext}');
 
       final response = await html.HttpRequest.request(
         '/api/generate-suggestions',

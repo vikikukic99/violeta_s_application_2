@@ -35,6 +35,16 @@ class ActivitySelectionScreenState
     super.initState();
     // Check for registration data after authentication
     _handleRegistrationData();
+    
+    // Automatically request location permission after a slight delay
+    // This ensures the screen is fully loaded and ready
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        print('[ActivitySelection] Auto-requesting location on page load...');
+        // Automatically get user's current location on page load
+        ref.read(activitySelectionNotifier.notifier).getCurrentLocation();
+      }
+    });
   }
 
   Future<void> _handleRegistrationData() async {
@@ -365,6 +375,16 @@ class ActivitySelectionScreenState
     return Consumer(
       builder: (context, ref, _) {
         final state = ref.watch(activitySelectionNotifier);
+        
+        // Prepare context for AI suggestions
+        final selectedActivities = state.activitiesList
+            ?.where((activity) => activity.isSelected == true)
+            .map((activity) => {'title': activity.title})
+            .toList() ?? [];
+        
+        final location = state.locationController?.text ?? '';
+        final preferredTime = state.timeController?.text ?? '';
+        
         return AIEnhancedTextField(
           controller: state.descriptionController!,
           hintText:
@@ -377,6 +397,10 @@ class ActivitySelectionScreenState
           validator: (value) => ref
               .read(activitySelectionNotifier.notifier)
               .validateDescription(value),
+          // Pass context to AI field for personalized suggestions
+          activities: selectedActivities,
+          locationContext: location,
+          preferredTimeContext: preferredTime,
         );
       },
     );
