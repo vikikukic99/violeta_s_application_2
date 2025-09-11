@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:dio/dio.dart';
+import 'dart:convert';
 
 import '../../../core/app_export.dart';
 
@@ -78,7 +81,35 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
             locationError: null,
             citySearchResults: const [],
           ),
-        );
+        ) {
+    // Automatically try to get user's location when the notifier is created
+    _autoGetLocation();
+  }
+
+  // Private method to automatically get location on initialization
+  void _autoGetLocation() async {
+    // Only auto-get location if the field is empty
+    if (state.locationController?.text.isEmpty ?? true) {
+      try {
+        // Check if location services are enabled first
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          return; // Exit silently if location services are disabled
+        }
+
+        // Check current permission status
+        final permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+          return; // Exit silently if permission is denied - user can manually tap button
+        }
+
+        // If we have permission, get location automatically
+        await getCurrentLocation();
+      } catch (e) {
+        // Fail silently - user can manually tap the location button if needed
+      }
+    }
+  }
 
   /* ------------------------ Activities ------------------------ */
 
@@ -121,10 +152,36 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
         desiredAccuracy: LocationAccuracy.medium,
       );
 
-      // NOTE: Reverse geocoding left as an exercise depending on your chosen service.
-      // For now, just display lat/lng for verification.
-      state.locationController?.text =
-          'Lat: ${pos.latitude.toStringAsFixed(4)}, Lng: ${pos.longitude.toStringAsFixed(4)}';
+      // Use reverse geocoding to get actual city name
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          pos.latitude, 
+          pos.longitude
+        );
+        
+        if (placemarks.isNotEmpty) {
+          final placemark = placemarks.first;
+          final cityName = placemark.locality ?? 
+                          placemark.subAdministrativeArea ?? 
+                          placemark.administrativeArea ?? 
+                          'Unknown Location';
+          
+          final countryCode = placemark.isoCountryCode ?? '';
+          final locationText = countryCode.isNotEmpty 
+              ? '$cityName, $countryCode' 
+              : cityName;
+          
+          state.locationController?.text = locationText;
+        } else {
+          // Fallback to coordinates if no placemark found
+          state.locationController?.text =
+              '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}';
+        }
+      } catch (e) {
+        // Fallback to coordinates if geocoding fails
+        state.locationController?.text =
+            '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}';
+      }
 
       state = state.copyWith(isSearchingLocation: false, locationError: null);
     } catch (e) {
@@ -184,7 +241,7 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
       final selectedActivities = state.activitiesList
           ?.where((activity) => activity.selected)
           .map((activity) => activity.title)
-          .join(', ') ?? 'fitness activities';
+          .toList() ?? [];
       
       final location = state.locationController?.text?.isNotEmpty == true
           ? state.locationController!.text
@@ -194,17 +251,59 @@ class ActivitySelectionNotifier extends StateNotifier<ActivitySelectionState> {
           ? state.timeController!.text
           : '';
 
-      // Call your backend API that's already set up
-      // For now, return contextual suggestions based on selections
-      return _generateContextualSuggestions(selectedActivities, location, preferredTime);
+      // Call the OpenAI backend API
+      return await _callOpenAIBackend(selectedActivities, location, preferredTime);
     } catch (e) {
-      // Fallback to default suggestions
-      return [
-        'I love exploring new walking routes and discovering hidden gems in the city.',
-        'Looking for motivated fitness companions who enjoy morning walks and healthy conversations.',
-        'Passionate about wellness and building meaningful connections through shared activities.',
-        'Training for my fitness goals and would love accountability buddies for regular activities.',
-      ];
+      // Fallback to contextual suggestions if backend fails
+      final selectedActivitiesText = state.activitiesList
+          ?.where((activity) => activity.selected)
+          .map((activity) => activity.title)
+          .join(', ') ?? 'fitness activities';
+      
+      final location = state.locationController?.text ?? '';
+      final preferredTime = state.timeController?.text ?? '';
+      
+      return _generateContextualSuggestions(selectedActivitiesText, location, preferredTime);
+    }
+  }
+
+  Future<List<String>> _callOpenAIBackend(List<String> activities, String location, String preferredTime) async {
+    try {
+      final dio = Dio();
+      
+      // Use relative path since Flutter web and backend are served from same origin
+      // This works in production and avoids hardcoded domains
+      final response = await dio.post(
+        '/api/generate-suggestions',
+        data: {
+          'activities': activities.map((title) => {'title': title}).toList(),
+          'location': location,
+          'preferredTime': preferredTime,
+        },
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is Map && data.containsKey('suggestions')) {
+          final suggestions = List<String>.from(data['suggestions'] ?? []);
+          if (suggestions.isNotEmpty) {
+            return suggestions;
+          }
+        }
+      }
+      
+      // If we get here, the response wasn't in the expected format
+      throw Exception('Invalid response format from OpenAI backend');
+      
+    } catch (e) {
+      print('Failed to get AI suggestions from backend: $e');
+      // Re-throw to trigger fallback in getAISuggestions
+      throw e;
     }
   }
 

@@ -29,85 +29,118 @@ class AIEnhancedTextField extends ConsumerStatefulWidget {
 }
 
 class _AIEnhancedTextFieldState extends ConsumerState<AIEnhancedTextField> {
+  bool _isLoadingSuggestions = false;
+
   Future<void> _openAISuggestions() async {
-    final notifier = ref.read(activitySelectionNotifierProvider.notifier);
-    final suggestions = await notifier.getAISuggestions();
+    if (_isLoadingSuggestions) return;
+    
+    setState(() => _isLoadingSuggestions = true);
+    
+    try {
+      final notifier = ref.read(activitySelectionNotifierProvider.notifier);
+      final suggestions = await notifier.getAISuggestions();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: false,
-      backgroundColor: appTheme.white_A700,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.h)),
-      ),
-      builder: (_) {
-        return SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16.h, 12.h, 16.h, 16.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40.h,
-                  height: 4.h,
-                  margin: EdgeInsets.only(bottom: 12.h),
-                  decoration: BoxDecoration(
-                    color: appTheme.blue_gray_100,
-                    borderRadius: BorderRadius.circular(2.h),
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: false,
+        backgroundColor: appTheme.white_A700,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16.h)),
+        ),
+        builder: (_) {
+          return SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16.h, 12.h, 16.h, 16.h),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40.h,
+                    height: 4.h,
+                    margin: EdgeInsets.only(bottom: 12.h),
+                    decoration: BoxDecoration(
+                      color: appTheme.blue_gray_100,
+                      borderRadius: BorderRadius.circular(2.h),
+                    ),
                   ),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.auto_awesome, color: appTheme.green_500),
-                    SizedBox(width: 8.h),
-                    Text(
-                      'AI suggestions',
-                      style: TextStyleHelper.instance.title16SemiBoldPoppins
-                          .copyWith(color: appTheme.blue_gray_900),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-                ...suggestions.map((s) {
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: 10.h),
-                    child: InkWell(
-                      onTap: () {
-                        // Insert into field
-                        widget.controller.text = s;
-                        widget.controller.selection =
-                            TextSelection.fromPosition(
-                          TextPosition(offset: widget.controller.text.length),
-                        );
-                        Navigator.pop(context);
-                      },
-                      borderRadius: BorderRadius.circular(10.h),
-                      child: Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(12.h),
-                        decoration: BoxDecoration(
-                          color: appTheme.gray_50,
-                          border: Border.all(color: appTheme.blue_gray_100),
-                          borderRadius: BorderRadius.circular(10.h),
-                        ),
-                        child: Text(
-                          s,
-                          style: TextStyleHelper.instance.body14RegularInter
-                              .copyWith(color: appTheme.blue_gray_800),
-                        ),
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome, color: appTheme.green_500),
+                      SizedBox(width: 8.h),
+                      Text(
+                        'AI suggestions',
+                        style: TextStyleHelper.instance.title16SemiBoldPoppins
+                            .copyWith(color: appTheme.blue_gray_900),
                       ),
-                    ),
-                  );
-                }).toList(),
-              ],
+                    ],
+                  ),
+                  SizedBox(height: 12.h),
+                  if (suggestions.isEmpty) 
+                    Padding(
+                      padding: EdgeInsets.all(16.h),
+                      child: Text(
+                        'No suggestions available right now. Try again or write your own description.',
+                        style: TextStyleHelper.instance.body14RegularInter
+                            .copyWith(color: appTheme.gray_600),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    ...suggestions.map((s) {
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: 10.h),
+                        child: InkWell(
+                          onTap: () {
+                            // Insert into field
+                            widget.controller.text = s;
+                            widget.controller.selection =
+                                TextSelection.fromPosition(
+                              TextPosition(offset: widget.controller.text.length),
+                            );
+                            Navigator.pop(context);
+                          },
+                          borderRadius: BorderRadius.circular(10.h),
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(12.h),
+                            decoration: BoxDecoration(
+                              color: appTheme.gray_50,
+                              border: Border.all(color: appTheme.blue_gray_100),
+                              borderRadius: BorderRadius.circular(10.h),
+                            ),
+                            child: Text(
+                              s,
+                              style: TextStyleHelper.instance.body14RegularInter
+                                  .copyWith(color: appTheme.blue_gray_800),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                ],
+              ),
             ),
+          );
+        },
+      );
+    } catch (e) {
+      // Show error to user if something goes wrong
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to fetch AI suggestions. Try again later.'),
+            backgroundColor: appTheme.colorFFEF44,
           ),
         );
-      },
-    );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingSuggestions = false);
+      }
+    }
   }
 
   @override
@@ -146,11 +179,20 @@ class _AIEnhancedTextFieldState extends ConsumerState<AIEnhancedTextField> {
           padding: EdgeInsets.only(right: 8.h),
           child: IconButton(
             tooltip: 'AI Assistant',
-            onPressed: _openAISuggestions,
-            icon: Icon(
-              Icons.auto_awesome,
-              color: appTheme.green_500,
-            ),
+            onPressed: _isLoadingSuggestions ? null : _openAISuggestions,
+            icon: _isLoadingSuggestions 
+                ? SizedBox(
+                    width: 16.h,
+                    height: 16.h,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: appTheme.green_500,
+                    ),
+                  )
+                : Icon(
+                    Icons.auto_awesome,
+                    color: appTheme.green_500,
+                  ),
           ),
         ),
       ),
