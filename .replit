@@ -11,15 +11,11 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 40441
-externalPort = 3001
-
-[[ports]]
 localPort = 41825
 externalPort = 3000
 
 [workflows]
-runButton = "Project"
+runButton = "Flutter Web Dev"
 
 [[workflows.workflow]]
 name = "Project"
@@ -41,6 +37,19 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "Flutter Web Dev"
+author = 46532033
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter pub get"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flutter run -d web-server --web-port=5000 --web-hostname=0.0.0.0 --debug"
 
 [deployment]
 deploymentTarget = "autoscale"
