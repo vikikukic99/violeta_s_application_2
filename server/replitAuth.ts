@@ -34,7 +34,7 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Configure OpenID Connect Strategy
+  // Configure OpenID Connect Strategy with PKCE support
   passport.use('replit', new OpenIDConnectStrategy({
     issuer: process.env.ISSUER_URL ?? 'https://replit.com/oidc',
     authorizationURL: 'https://replit.com/oidc/auth',
@@ -44,6 +44,7 @@ export async function setupAuth(app: Express) {
     clientSecret: process.env.CLIENT_SECRET!,
     callbackURL: '/api/callback',
     scope: ['openid', 'email', 'profile'],
+    usePKCE: true, // Enable PKCE for enhanced security
   }, async function verify(issuer: string, sub: string, profile: any, jwtClaims: any, accessToken: string, refreshToken: string, params: any, done: any) {
     try {
       console.log('Auth verify callback:', { sub, profile: profile?._json });
