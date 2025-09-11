@@ -11,7 +11,7 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 40571
+localPort = 39289
 externalPort = 3000
 
 [workflows]
@@ -37,23 +37,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Backend API"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Full Stack App"
-
-[[workflows.workflow]]
-name = "Backend API"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-waitForPort = 3000
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow]]
 name = "Full Stack App"

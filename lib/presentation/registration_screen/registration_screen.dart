@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:html' as html;
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_button.dart';
@@ -317,12 +318,15 @@ class RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       text: 'Create Account',
       backgroundColor: appTheme.green_500,
       textColor: appTheme.whiteCustom,
-      rightIcon: ImageConstant.imgI,
+      rightIconWidget: Icon(
+        Icons.arrow_forward_rounded,
+        color: appTheme.whiteCustom,
+        size: 20.h,
+      ),
       isEnabled: !(state.isLoading ?? false),
       onPressed: () {
-        if (_formKey.currentState!.validate()) {
-          ref.read(registrationNotifierProvider.notifier).createAccount();
-        }
+        // Redirect to Replit Auth for account creation
+        html.window.location.href = '/api/login';
       },
     );
   }
@@ -365,7 +369,8 @@ class RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             borderColor: appTheme.blue_gray_100,
             leftIcon: ImageConstant.imgFrameBlueGray900,
             onPressed: () {
-              // Handle Google sign in
+              // Redirect to Replit Auth (supports Google login)
+              html.window.location.href = '/api/login';
             },
           ),
         ),
@@ -378,7 +383,8 @@ class RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             borderColor: appTheme.blue_gray_100,
             leftIcon: ImageConstant.imgFrameBlueGray90018x12,
             onPressed: () {
-              // Handle Apple sign in
+              // Redirect to Replit Auth (supports Apple login)
+              html.window.location.href = '/api/login';
             },
           ),
         ),
@@ -391,7 +397,8 @@ class RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       padding: EdgeInsets.only(left: 8.h),
       child: GestureDetector(
         onTap: () {
-          NavigatorService.pushNamed(AppRoutes.loginScreen);
+          // Redirect to Replit Auth login
+          html.window.location.href = '/api/login';
         },
         child: RichText(
           text: TextSpan(
@@ -402,7 +409,7 @@ class RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                     .copyWith(color: appTheme.blue_gray_700),
               ),
               TextSpan(
-                text: '  Log in ',
+                text: '  Log In ',
                 style: TextStyleHelper.instance.title16MediumPoppins
                     .copyWith(color: appTheme.green_500),
               ),
