@@ -16,10 +16,17 @@ class OnboardingScreenState extends ConsumerState<OnboardingScreen>
   late AnimationController _fadeController;
   late AnimationController _scaleController;
   late AnimationController _floatController;
+  late AnimationController _logoController;
+  late AnimationController _titleController;
+  late AnimationController _subtitleController;
   
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _floatAnimation;
+  late Animation<double> _logoSlideAnimation;
+  late Animation<double> _logoRotateAnimation;
+  late Animation<double> _titleSlideAnimation;
+  late Animation<double> _subtitleSlideAnimation;
 
   @override
   void initState() {
@@ -38,6 +45,21 @@ class OnboardingScreenState extends ConsumerState<OnboardingScreen>
     
     _floatController = AnimationController(
       duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+    
+    _logoController = AnimationController(
+      duration: const Duration(milliseconds: 1800),
+      vsync: this,
+    );
+    
+    _titleController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    
+    _subtitleController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
     
@@ -66,10 +88,54 @@ class OnboardingScreenState extends ConsumerState<OnboardingScreen>
       curve: Curves.easeInOut,
     ));
     
-    // Start animations
-    _fadeController.forward();
-    _scaleController.forward();
-    _floatController.repeat(reverse: true);
+    _logoSlideAnimation = Tween<double>(
+      begin: -100.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.bounceOut,
+    ));
+    
+    _logoRotateAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.elasticOut,
+    ));
+    
+    _titleSlideAnimation = Tween<double>(
+      begin: 50.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _titleController,
+      curve: Curves.easeOutBack,
+    ));
+    
+    _subtitleSlideAnimation = Tween<double>(
+      begin: 30.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _subtitleController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    // Start animations with staggered delays
+    _logoController.forward();
+    
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _titleController.forward();
+    });
+    
+    Future.delayed(const Duration(milliseconds: 600), () {
+      _subtitleController.forward();
+    });
+    
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      _fadeController.forward();
+      _scaleController.forward();
+      _floatController.repeat(reverse: true);
+    });
   }
 
   @override
@@ -77,6 +143,9 @@ class OnboardingScreenState extends ConsumerState<OnboardingScreen>
     _fadeController.dispose();
     _scaleController.dispose();
     _floatController.dispose();
+    _logoController.dispose();
+    _titleController.dispose();
+    _subtitleController.dispose();
     super.dispose();
   }
 
@@ -113,10 +182,7 @@ class OnboardingScreenState extends ConsumerState<OnboardingScreen>
                         _buildSubtitle(),
                         SizedBox(height: 28.h),
                         _buildMainImage(),
-                        SizedBox(height: 28.h),
-                        _buildPageIndicator(),
-                        SizedBox(height: 112.h),
-                        _buildSkipText(),
+                        SizedBox(height: 60.h),
                       ],
                     ),
                   ),
@@ -183,77 +249,108 @@ class OnboardingScreenState extends ConsumerState<OnboardingScreen>
   }
 
   Widget _buildAppLogo() {
-    return Container(
-      width: 104.h,
-      height: 104.h,
-      child: Stack(
-        children: [
-          Container(
-            width: 96.h,
-            height: 96.h,
-            margin: EdgeInsets.only(right: 8.h),
-            padding: EdgeInsets.all(28.h),
-            decoration: BoxDecoration(
-              color: appTheme.indigo_A400,
-              borderRadius: BorderRadius.circular(48.h),
-              boxShadow: [
-                BoxShadow(
-                  color: appTheme.color190000,
-                  offset: Offset(0, 10),
-                  blurRadius: 15,
-                ),
-              ],
-            ),
-            child: CustomImageView(
-              imagePath: ImageConstant.imgVectorWhiteA700,
-              height: 36.h,
-              width: 22.h,
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
+    return AnimatedBuilder(
+      animation: _logoController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_logoSlideAnimation.value, 0),
+          child: Transform.scale(
+            scale: _logoRotateAnimation.value,
             child: Container(
-              width: 40.h,
-              height: 40.h,
-              padding: EdgeInsets.all(10.h),
-              decoration: BoxDecoration(
-                color: appTheme.green_500,
-                borderRadius: BorderRadius.circular(20.h),
-                boxShadow: [
-                  BoxShadow(
-                    color: appTheme.color190000,
-                    offset: Offset(0, 4),
-                    blurRadius: 6,
+              width: 104.h,
+              height: 104.h,
+              child: Stack(
+                children: [
+                  Container(
+                    width: 96.h,
+                    height: 96.h,
+                    margin: EdgeInsets.only(right: 8.h),
+                    padding: EdgeInsets.all(28.h),
+                    decoration: BoxDecoration(
+                      color: appTheme.indigo_A400,
+                      borderRadius: BorderRadius.circular(48.h),
+                      boxShadow: [
+                        BoxShadow(
+                          color: appTheme.color190000,
+                          offset: Offset(0, 10),
+                          blurRadius: 15,
+                        ),
+                      ],
+                    ),
+                    child: CustomImageView(
+                      imagePath: ImageConstant.imgVectorWhiteA700,
+                      height: 36.h,
+                      width: 22.h,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 40.h,
+                      height: 40.h,
+                      padding: EdgeInsets.all(10.h),
+                      decoration: BoxDecoration(
+                        color: appTheme.green_500,
+                        borderRadius: BorderRadius.circular(20.h),
+                        boxShadow: [
+                          BoxShadow(
+                            color: appTheme.color190000,
+                            offset: Offset(0, 4),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: CustomImageView(
+                        imagePath: ImageConstant.imgVectorWhiteA70014x16,
+                        height: 14.h,
+                        width: 16.h,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: CustomImageView(
-                imagePath: ImageConstant.imgVectorWhiteA70014x16,
-                height: 14.h,
-                width: 16.h,
-              ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildAppTitle() {
-    return Text(
-      'WalkTalk',
-      style:
-          TextStyleHelper.instance.display36BoldPoppins.copyWith(height: 1.11),
-      textAlign: TextAlign.center,
+    return AnimatedBuilder(
+      animation: _titleController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _titleSlideAnimation.value),
+          child: Opacity(
+            opacity: _titleController.value,
+            child: Text(
+              'WalkTalk',
+              style: TextStyleHelper.instance.display36BoldPoppins.copyWith(height: 1.11),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildSubtitle() {
-    return Text(
-      'Track your active lifestyle',
-      style:
-          TextStyleHelper.instance.title18RegularPoppins.copyWith(height: 1.5),
+    return AnimatedBuilder(
+      animation: _subtitleController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _subtitleSlideAnimation.value),
+          child: Opacity(
+            opacity: _subtitleController.value,
+            child: Text(
+              'Track your active lifestyle',
+              style: TextStyleHelper.instance.title18RegularPoppins.copyWith(height: 1.5),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -307,48 +404,6 @@ class OnboardingScreenState extends ConsumerState<OnboardingScreen>
     );
   }
 
-  Widget _buildPageIndicator() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 32.h,
-          height: 8.h,
-          decoration: BoxDecoration(
-            color: appTheme.indigo_A400,
-            borderRadius: BorderRadius.circular(4.h),
-          ),
-        ),
-        SizedBox(width: 8.h),
-        Container(
-          width: 8.h,
-          height: 8.h,
-          decoration: BoxDecoration(
-            color: appTheme.blue_gray_100,
-            borderRadius: BorderRadius.circular(4.h),
-          ),
-        ),
-        SizedBox(width: 8.h),
-        Container(
-          width: 8.h,
-          height: 8.h,
-          decoration: BoxDecoration(
-            color: appTheme.blue_gray_100,
-            borderRadius: BorderRadius.circular(4.h),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSkipText() {
-    return Text(
-      'Skip for now',
-      style: TextStyleHelper.instance.body14RegularPoppins
-          .copyWith(color: appTheme.gray_600, height: 1.43),
-      textAlign: TextAlign.center,
-    );
-  }
 
   Widget _buildGetStartedButton() {
     return Container(
